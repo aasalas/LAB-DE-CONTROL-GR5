@@ -11,7 +11,7 @@ gain = 1;
 % se agregan al path para que los bloques las encuentren por nombre,
 % sin rutas absolutas (funciona en cualquier máquina del equipo).
 here = fileparts(mfilename('fullpath'));
-addpath(fullfile(here, '..', '..', 'CAD'));
+addpath(fullfile(here, '..', 'CAD'));
 addpath(here);   % para resolver MARLUP_hidraulico_params.m
 
 %% === Geometría / Asignanción de actuadores ===
