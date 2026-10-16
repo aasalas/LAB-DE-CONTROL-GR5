@@ -1,23 +1,25 @@
-### AL ###
-#Template for AL projects for Dynamics 365 Business Central
-#launch.json folder
+### MATLAB / Simulink ###
+# Cache de compilacion y simulacion (se regenera)
+slprj/
+*.slxc
+sccprj/
+codegen/
+*.mexw64
+*.mexa64
+*.mexmaci64
+
+# Respaldos automaticos de Simulink al cambiar de version
+*.slx.r20*
+*.mdl.r20*
+*.autosave
+*.asv
+
+### SolidWorks ###
+# Archivos de bloqueo temporales
+~$*
+
+### Sistema / editor ###
 .vscode/
-#Cache folder
-.alcache/
-#Symbols folder
-.alpackages/
-#Snapshots folder
-.snapshots/
-#Testing Output folder
-.output/
-#Extension App-file
-*.app
-#Rapid Application Development File
-rad.json
-#Translation Base-file
-*.g.xlf
-#License-files
-*.bclicense
-*.flf
-#Test results file
-TestResults.xml
+Thumbs.db
+desktop.ini
+.DS_Store
