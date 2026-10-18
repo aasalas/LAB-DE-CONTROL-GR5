@@ -5,6 +5,15 @@
 % source, a control valve, pipes and a cylinder which is used to move an
 % inertial load
 %%
+% Piezas CAD (.SLDPRT) que cargan los bloques File Solid del modelo:
+% se agregan al path para que los bloques las encuentren por nombre,
+% sin rutas absolutas (funciona en cualquier máquina del equipo).
+here = fileparts(mfilename('fullpath'));
+addpath(fullfile(here, '..', '..', 'CAD'));
+addpath(here);   % para resolver MARLUP_hidraulico_params.m
+
+
+
 
 % constants
 % Masa móvil mínima conocida asociada a un actuador.
