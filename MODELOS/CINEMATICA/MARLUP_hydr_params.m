@@ -19,10 +19,10 @@ addpath(here);   % para resolver MARLUP_hidraulico_params.m
 % Masa móvil mínima conocida asociada a un actuador.
 % Incluye el cilindro/estructura superior que se desplaza con el vástago.
 % Faltan por incorporar otras masas equivalentes de MARLUP.
-m_load = 58;
+m_load = 20;
 g = 9.81;                       % Gravitational acceleration [m/s^2]
 p_tank = 1.01325e5 ;            % Atmospheric pressure [Pa] 
-p_supply = 90e5 ;               % Supply pressure [Pa]
+p_supply = 160e5 ;               % Supply pressure [Pa]
 effective_bulkmodulus = 750e6;  % Effective bulkmodulus [Pa]
 friction.visc = 1000 ;          % Viscous friction factor [Ns/m]
 
@@ -33,7 +33,7 @@ cyl.d_rod = 0.028;                                              % Cylinder rod d
 cyl.stroke = 0.45;                                              % Cylinder stroke leght [m]
 cyl.A_piston = pi*(cyl.d_piston/2)^2;                           % Cylinder piston area [m^2]
 cyl.A_rodside = (pi*(cyl.d_piston/2)^2)-(pi*(cyl.d_rod/2)^2) ;  % Cylinder rod side area [m^2]
-cyl.x_init = 0.23;                                              % Starting position of cylinder [m]
+cyl.x_init = 0;                                              % Starting position of cylinder [m]
 cyl.V0A =  0.3/1e3;                                             % V0 in the A side of the cylinder [m^3]
 cyl.V0B = 0.15/1e3;                                             % V0 in the B side of the cylinder [m^3]
 cyl.p0A = 25e5 ;                                                % Cylinder A-chamber initial pressure [Pa]
@@ -41,7 +41,7 @@ cyl.p0B = 35e5 ;                                                % Cylinder A-cha
 
 
 % 4/3 control valve
-valve.QN = 20/60000 ;                                           % Nominal flow of valve [m^3/s]
+valve.QN = 40/60000 ;                                           % Nominal flow of valve [m^3/s]
 valve.dpN = 3.5e6 ;                                             % Nominal pressure of nominal flow [Pa]
 valve.ptr = 0.1e6 ;                                             % Valve transition pressure [Pa]
 valve.delay = 1e-3;                                             % Delay of the valve [s]
