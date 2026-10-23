@@ -34,3 +34,8 @@ desktop.ini
 
 # Respaldos de Simulink sin extension .slx (p. ej. MiL.r2025b)
 *.r20[0-9][0-9][ab]
+
+# Binarios que deja la compilacion para Arduino (PIL)
+*.hex
+*.eep
+*.elf
