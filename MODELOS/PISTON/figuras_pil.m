@@ -1,4 +1,4 @@
-% Figuras del informe a partir de R (run_pil_all) o de resultados/resultados_pil.mat.
+% Figuras del informe a partir de R (run_pil) o de resultados/resultados_pil.mat.
 % Tema claro forzado: en R2025a+ las figuras heredan el tema oscuro del escritorio.
 here = fileparts(mfilename('fullpath'));
 if ~exist('R', 'var'), load(fullfile(here, 'resultados', 'resultados_pil.mat'), 'R'); end

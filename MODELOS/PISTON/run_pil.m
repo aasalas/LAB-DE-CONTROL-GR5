@@ -1,16 +1,18 @@
-% PIL oficial de Simulink: el bloque Model 'Controlador' (ctrl_pi.slx) corre en modo Normal
-% para el MiL y en modo Processor-in-the-loop (codigo generado por Embedded Coder en el
-% Arduino Uno) para los casos PiL. Mismos 6 casos y metricas que run_pil_all.
-% Resultados en resultados/pil_oficial/.
+% Processor-in-the-Loop de un piston: el bloque Model 'Controlador' de PiL.slx referencia
+% ctrl_pi.slx y corre en modo Normal para el MiL y en modo Processor-in-the-loop (codigo
+% generado por Embedded Coder en el Arduino Uno) para los cinco casos PiL.
+% Escribe resultados/ (metricas.csv, log_corridas.txt, CSV por caso) y figuras/.
+%   run_pil                       usa el ultimo puerto serial disponible
+%   PIL_PORT = 'COM4'; run_pil    fija el puerto
 here = fileparts(mfilename('fullpath'));
 cd(here);
 run(fullfile(here, '..', 'CINEMATICA', 'MARLUP_hydr_params.m'));
-if ~exist('PIL_PORT', 'var'), pil_puerto; else, pil_puerto(PIL_PORT); end   % ej.: PIL_PORT = "COM4";
+if ~exist('PIL_PORT', 'var'), pil_puerto; else, pil_puerto(PIL_PORT); end
 % Si el codigo de ctrl_pi se da por "al dia" (carpeta slprj o cache ctrl_pi.slxc), la aplicacion
 % PIL se arma sin wrapper.mk y el make falla; se fuerza una compilacion limpia antes de cada caso PIL.
 pild = fullfile('slprj', 'ert', 'ctrl_pi');
-m = 'PiL_oficial'; load_system(m);
-outd = fullfile('resultados', 'pil_oficial'); figd = fullfile(outd, 'figuras');
+m = 'PiL'; load_system(m);
+outd = 'resultados'; figd = 'figuras';
 if ~isfolder(outd), mkdir(outd); end
 logf = fopen(fullfile(outd, 'log_corridas.txt'), 'w');
 
@@ -38,7 +40,7 @@ for c = 1:size(casos, 1)
     end
     tic; out = sim(m, 'StopTime', '4', 'ReturnWorkspaceOutputs', 'on'); dt = toc;
     n = numel(out.log_x); t = (0:n-1)'*0.01;
-    L = [t out.log_ref(:) out.log_x(:) out.log_xm(:) out.log_u(:) zeros(n, 1)];
+    L = [t out.log_ref(:) out.log_x(:) out.log_xm(:) out.log_u(:)];
     R.(nom) = L;
     writematrix(L, fullfile(outd, [nom '.csv']));
     fprintf(logf, '%s: modo %s, %d muestras, %.1f s\n', nom, casos{c,2}, n, dt);
@@ -51,4 +53,5 @@ disp(M);
 figuras_pil
 fprintf(logf, 'OK\n'); fclose(logf);
 save(fullfile(outd, 'resultados_pil.mat'), 'R', 'M');
-disp('run_pil_oficial OK');
+set_param([m '/Controlador'], 'SimulationMode', pil); save_system(m);   % queda abierto en modo PIL
+disp('run_pil OK');

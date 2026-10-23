@@ -1,7 +1,0 @@
-Puertos: COM6
-CLI: C:\Program Files\Arduino IDE\resources\app\lib\backend\resources\arduino-cli.exe
-CMD: "C:\Program Files\Arduino IDE\resources\app\lib\backend\resources\arduino-cli.exe" compile --jobs 1 --upload -p COM6 --fqbn arduino:avr:uno "C:\Users\Lenovo Yoga\Desktop\SII 2026\LAB-DE-CONTROL-GR5\MODELOS\PISTON\pil_arduino"
-STATUS: 0
-El Sketch usa 3590 bytes (11%) del espacio de almacenamiento de programa. El máximo es 32256 bytes.
-Las variables Globales usan 197 bytes (9%) de la memoria dinámica, dejando 1851 bytes para las variables locales. El máximo es 2048 bytes.
-

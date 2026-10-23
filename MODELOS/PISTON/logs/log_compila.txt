@@ -1,6 +1,0 @@
-No platforms installed.
-
----
-1
-Error during build: Platform 'arduino:avr' not found: platform not installed
-Try running `arduino-cli core install arduino:avr`
