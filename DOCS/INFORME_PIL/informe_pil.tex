@@ -43,7 +43,7 @@
 % 150--200 palabras: qué se hizo, resultado principal con números,
 % causa principal de la degradación.
 \begin{abstract}
-MARLUP es una plataforma de nivelación accionada por cilindros hidráulicos. Este trabajo valida su controlador de posición mediante un esquema \textit{Processor-in-the-Loop} (PiL). El modelo dinámico de un actuador, compuesto por un cilindro Bosch Rexroth CDH1 40/28 y una válvula proporcional 4/3, se simula en Simulink. El controlador PI, sintonizado manualmente ($K_p=60$, $K_i=1$, saturación en $\pm1$) y discretizado por Tustin con $T_s=\SI{10}{ms}$, se ejecuta en un Arduino UNO R3. Ambos intercambian la posición y el comando por UART mediante una trama binaria de seis bytes. Se realizaron dos implementaciones. En la primera, sensores y actuadores son ideales; en la segunda, se incorporan no idealidades tomadas de las hojas de datos: cuantización del ADC, error de linealidad e histéresis del sensor magnetostrictivo. Frente a la simulación MiL, el PiL ideal presenta un error RMS de \SI{0.0036}{mm}, mientras que el caso no ideal alcanza un sobreimpulso de \SI{3.47}{\percent} y un error en estado estacionario de \SI{0.058}{mm}, frente al requisito de \SI{2.3}{mm}. La degradación se atribuye principalmente a la cuantización del ADC, que por sí sola produce un error RMS de \SI{0.113}{mm} respecto al MiL.
+MARLUP es una plataforma de nivelación accionada por cilindros hidráulicos. Este trabajo valida su controlador de posición mediante un esquema \textit{Processor-in-the-Loop} (PiL). El modelo dinámico de un actuador, compuesto por un cilindro Bosch Rexroth CDH1 40/28 y una válvula proporcional 4/3, se simula en Simulink. El controlador PI, sintonizado manualmente ($K_p=60$, $K_i=1$, saturación en $\pm1$) y discretizado por Tustin con $T_s=\SI{10}{ms}$, se ejecuta en un Arduino UNO R3 mediante el flujo \textit{Processor-in-the-Loop} de Simulink: Embedded Coder genera el código C del controlador, lo compila y lo carga en la placa, y un bloque Model en modo PIL intercambia la posición y el comando con ella por UART. Se realizaron dos implementaciones. En la primera, sensores y actuadores son ideales; en la segunda, se incorporan no idealidades tomadas de las hojas de datos: cuantización del ADC, error de linealidad e histéresis del sensor magnetostrictivo. El PiL ideal reproduce exactamente la simulación MiL (error nulo en las 401 muestras), mientras que el caso no ideal alcanza un sobreimpulso de \SI{3.47}{\percent} y un error en estado estacionario de \SI{0.047}{mm}, frente al requisito de \SI{2.3}{mm}. La degradación se atribuye principalmente a la cuantización del ADC, que por sí sola produce un error RMS de \SI{0.121}{mm} respecto al MiL.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -66,7 +66,7 @@ El modelo dinámico del actuador parte del descrito en \cite{avance2}. Está com
 
 Respecto a \cite{avance2}, el MiL se reajustó. Con la sintonización original ($K_p=6.7$, $K_i=1$), la válvula solo saturaba para errores mayores a \SI{0.15}{m}, y la acción integral, con una constante de tiempo cercana a \SI{7}{s}, producía una cola de asentamiento de unos \SI{12}{s}. Por ello se elevó $K_p$ a 60, manteniendo $K_i=1$, y se limitó el comando a $u\in[-1,1]$, el rango normalizado de apertura de la válvula. Además, se aumentaron la presión de suministro a \SI{160}{bar} y el caudal nominal de la válvula a \SI{40}{L/min}. Con $K_p=60$, la válvula permanece abierta casi todo el recorrido y empieza a cerrar a unos \SI{1.7}{cm} ($1/K_p$) del objetivo. La frecuencia natural hidráulica estimada es $\omega_h\approx\SI{390}{rad/s}$, con $\zeta\approx0.06$.
 
-La presión de suministro queda por debajo de la nominal del cilindro (\SI{250}{bar}), y la velocidad máxima alcanzada, de aproximadamente \SI{0.40}{m/s}, queda por debajo de su límite de \SI{0.5}{m/s} \cite{rexroth}. Para un escalón de \SIrange{0}{0.40}{m} aplicado en $t=\SI{0.5}{s}$, que deja \SI{5}{cm} de margen al tope de carrera, el MiL con el controlador discreto de la Sec.~\ref{sec:control} presenta un tiempo de subida de \SI{0.73}{s}, un tiempo de asentamiento al \SI{2}{\percent} de \SI{1.05}{s} y un sobreimpulso de \SI{3.43}{\percent} (\SI{13.7}{mm}), con un error en estado estacionario de \SI{0.016}{mm}.
+La presión de suministro queda por debajo de la nominal del cilindro (\SI{250}{bar}), y la velocidad máxima alcanzada, de aproximadamente \SI{0.40}{m/s}, queda por debajo de su límite de \SI{0.5}{m/s} \cite{rexroth}. Para un escalón de \SIrange{0}{0.40}{m} aplicado en $t=\SI{0.5}{s}$, que deja \SI{5}{cm} de margen al tope de carrera, el MiL con el controlador discreto de la Sec.~\ref{sec:control} presenta un tiempo de subida de \SI{0.73}{s}, un tiempo de asentamiento al \SI{2}{\percent} de \SI{1.05}{s} y un sobreimpulso de \SI{3.43}{\percent} (\SI{13.7}{mm}), con un error en estado estacionario de \SI{0.014}{mm}.
 
 \begin{table}[H]
 \centering
@@ -100,37 +100,24 @@ Retardo de la válvula $T_d$ & \SI{1}{ms} \\
 
 \subsection{Hardware y software}
 % MCU, reloj, versión de MATLAB/Simulink, puerto y baudios.
-La planta se simula en MATLAB/Simulink R2026a con un solver de paso fijo \texttt{ode4} de \SI{0.1}{ms}. El controlador se ejecuta en un Arduino UNO R3 (ATmega328P, \SI{16}{MHz}) conectado por USB a \SI{115200}{baud} (puerto COM6). En el modelo, un bloque MATLAB Function de periodo $T_s=\SI{10}{ms}$ invoca en cada muestreo una función de MATLAB que aplica el modelo del sensor, arma la trama, la envía al MCU y espera su respuesta. La simulación queda así sincronizada paso a paso con el MCU (\textit{lockstep}): Simulink no avanza hasta recibir $u[k]$, por lo que la latencia de la comunicación no se traslada a la planta. El mismo bloque, con la comunicación desactivada, ejecuta en MATLAB la misma ley de control y constituye la referencia MiL.
+La planta se simula en MATLAB/Simulink R2026a con un solver de paso fijo \texttt{ode4} de \SI{0.1}{ms}. El controlador se ejecuta en un Arduino UNO R3 (ATmega328P, \SI{16}{MHz}) conectado por USB (puerto COM6) mediante el flujo \textit{Processor-in-the-Loop} de Simulink, con Embedded Coder y el \textit{Simulink Support Package for Arduino Hardware}. La Fig.~\ref{fig:arq} resume el lazo: la planta, el modelo del sensor y la referencia están en Simulink, y la ley de control, en el MCU.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=\columnwidth]{figuras/arquitectura_pil.pdf}   % fuente: figuras/arquitectura_pil.tex
-\caption{Arquitectura PiL: planta y modelos de sensor/actuador en Simulink, controlador en el MCU.}
+\caption{Arquitectura PiL: planta y modelo del sensor en Simulink, controlador en el MCU.}
 \label{fig:arq}
 \end{figure}
 
-
-
-\subsection{Protocolo y trama}
-La comunicación entre Simulink y el Arduino UNO R3 se realiza por UART con tramas binarias fijas de seis bytes en ambos sentidos (Fig.~\ref{fig:trama}). La trama de Simulink al MCU contiene el encabezado \texttt{0xAA}, la posición medida y la referencia como enteros sin signo de 16 bits en unidades de \SI{0.01}{mm} (byte bajo primero) y un \textit{checksum}. La respuesta contiene el encabezado \texttt{0x55}, el comando $u$ como entero con signo de 16 bits escalado por 32767, un contador de secuencia, un byte de estado y el \textit{checksum}. El \textit{checksum}, calculado como el XOR de los bytes anteriores, permite detectar errores de transmisión; si una trama llega corrupta, el MCU repite el último comando y lo indica en el byte de estado. Una trama con encabezado \texttt{0xA5} reinicia los estados del controlador antes de cada corrida.
-
-\begin{figure}[H]
-\centering
-% TODO: falta figuras/trama_uart.pdf (no existe en el repo); mientras tanto se muestra un marcador
-\IfFileExists{figuras/trama_uart.pdf}{\includegraphics[width=\columnwidth]{figuras/trama_uart.pdf}}{\fbox{\parbox[c][2cm][c]{0.9\columnwidth}{\centering Trama UART de 6 bytes (figura pendiente)}}}
-\caption{Trama UART de seis bytes entre Simulink y el Arduino.}
-\label{fig:trama}
-\end{figure}
-
-\subsection{Validación con el flujo PIL de Simulink}
+\subsection{Modelos en Simulink y comunicación}
 \label{sec:pil_oficial}
-Como verificación independiente del protocolo propio, el lazo se repitió con el flujo \textit{Processor-in-the-Loop} de Simulink (Embedded Coder y el \textit{Simulink Support Package for Arduino Hardware}). El controlador se separó en el modelo \texttt{ctrl\_pi.slx} (Fig.~\ref{fig:simctrl}): un bloque Discrete PID Controller en forma PI, con integrador trapezoidal (Tustin), $K_p=60$, $K_i=1$, $T_s=\SI{10}{ms}$, saturación en $\pm1$ y anti-windup por \textit{clamping}, es decir, la misma ley \eqref{eq:pi}. Este modelo se referencia desde \texttt{PiL\_oficial.slx} (Fig.~\ref{fig:simpil}) con un bloque Model en modo PIL: Embedded Coder genera el código C, lo compila para el ATmega328P y lo carga en la placa, y Simulink intercambia las entradas y la salida con el MCU por COM6 a \SI{115200}{baud}, también en \textit{lockstep}. Como en el AVR un \texttt{double} ocupa 4 bytes, la interfaz del controlador es de precisión simple y el modelo host convierte los tipos a la entrada y a la salida. Las no idealidades del sensor de la Sec.~\ref{sec:noideal} aparecen en este modelo como bloques de Simulink en el camino de realimentación: sesgo, histéresis (\textit{backlash}), cuantización y rango del ADC.
+El controlador está en el modelo \texttt{ctrl\_pi.slx} (Fig.~\ref{fig:simctrl}): un bloque Discrete PID Controller en forma PI, con integrador trapezoidal (Tustin), $K_p=60$, $K_i=1$, $T_s=\SI{10}{ms}$, saturación en $\pm1$ y anti-windup por \textit{clamping}, es decir, la ley \eqref{eq:pi}. Este modelo se referencia desde \texttt{PiL.slx} (Fig.~\ref{fig:simpil}) con un bloque Model. En modo PIL, Embedded Coder genera el código C de \texttt{ctrl\_pi}, lo compila para el ATmega328P y lo carga en la placa. En cada periodo $T_s$, Simulink envía por el puerto serie (\SI{115200}{baud}) la referencia y la posición medida, el MCU ejecuta un paso del código generado y devuelve $u[k]$. La simulación queda así sincronizada paso a paso con el MCU (\textit{lockstep}): Simulink no avanza hasta recibir $u[k]$, por lo que la latencia de la comunicación no se traslada a la planta. Con el mismo bloque en modo Normal, el controlador se simula en el PC y constituye la referencia MiL. Como en el AVR un \texttt{double} ocupa 4 bytes, la interfaz del controlador es de precisión simple y el modelo host convierte los tipos a la entrada y a la salida. Las no idealidades del sensor (Sec.~\ref{sec:noideal}) son bloques de Simulink en el camino de realimentación: sesgo, histéresis (\textit{backlash}), cuantización y rango del ADC.
 
 % A doble columna para que el diagrama sea legible (figure* no admite [H])
 \begin{figure*}[t]
 \centering
-\includegraphics[width=0.85\textwidth]{figuras/simulink_pil_oficial.pdf}
-\caption{Modelo \texttt{PiL\_oficial.slx}: el bloque Controlador referencia \texttt{ctrl\_pi} en modo PIL; abajo, el modelo del sensor con sus no idealidades.}
+\includegraphics[width=0.85\textwidth]{figuras/simulink_pil.pdf}
+\caption{Modelo \texttt{PiL.slx}: el bloque Controlador referencia \texttt{ctrl\_pi} en modo PIL; abajo, el modelo del sensor con sus no idealidades.}
 \label{fig:simpil}
 \end{figure*}
 
@@ -198,7 +185,7 @@ u[k] &= \operatorname{sat}_{\pm1}\!\big(K_p\, e[k] + I[k]\big),
 \end{aligned}
 \label{eq:pi}
 \end{equation}
-con anti-windup por \textit{clamping}: la integral no se actualiza cuando el comando está saturado y el error empuja en el mismo sentido de la saturación. Se descartó la forma incremental $u[k]=\operatorname{sat}(u[k-1]+q_0e[k]+q_1e[k-1])$. Con un escalón de \SI{0.40}{m}, la acción proporcional ($K_p e\approx24$) se recorta a 1 en la primera muestra y esa forma ``olvida'' el resto: el comando cae a cero cuando el pistón avanza $1/K_p\approx\SI{1.7}{cm}$, y a partir de ahí solo la integral, lenta, mueve el pistón. En el MiL, con esa forma, el pistón llegó apenas a \SI{38}{mm} en \SI{3.5}{s}. El periodo de muestreo lo impone Simulink, que envía una trama con la posición cada $T_s$. El Arduino calcula $u[k]$ al recibir cada trama válida y responde de inmediato, por lo que el lazo queda sincronizado sin requerir un temporizador propio en el MCU.
+con anti-windup por \textit{clamping}: la integral no se actualiza cuando el comando está saturado y el error empuja en el mismo sentido de la saturación. Se descartó la forma incremental $u[k]=\operatorname{sat}(u[k-1]+q_0e[k]+q_1e[k-1])$. Con un escalón de \SI{0.40}{m}, la acción proporcional ($K_p e\approx24$) se recorta a 1 en la primera muestra y esa forma ``olvida'' el resto: el comando cae a cero cuando el pistón avanza $1/K_p\approx\SI{1.7}{cm}$, y a partir de ahí solo la integral, lenta, mueve el pistón. En el MiL, con esa forma, el pistón llegó apenas a \SI{38}{mm} en \SI{3.5}{s}. La ley se implementa con el bloque Discrete PID Controller de Simulink y Embedded Coder genera a partir de él el código C que corre en el MCU, en aritmética de punto flotante de 32 bits. El periodo de muestreo lo impone Simulink: el código generado ejecuta un paso cada vez que recibe las entradas de un periodo, por lo que el lazo queda sincronizado sin requerir un temporizador propio en el MCU.
 
 El periodo $T_s=\SI{10}{ms}$ es mucho menor que el tiempo de asentamiento del lazo (\SI{1.05}{s}). En cambio, la resonancia hidráulica estimada ($\omega_h\approx\SI{390}{rad/s}$, unos \SI{62}{Hz}) queda por encima de la frecuencia de Nyquist ($f_s/2=\SI{50}{Hz}$); si se excitara, aparecería en la medición como un alias cercano a \SI{38}{Hz}. Como la válvula opera saturada durante casi todo el recorrido y el frenado es suave, no se espera excitarla; esto se verifica en los resultados.
 
@@ -211,7 +198,7 @@ El periodo $T_s=\SI{10}{ms}$ es mucho menor que el tiempo de asentamiento del la
 \section{Implementación 1: sensores y actuadores ideales}
 \label{sec:ideal}
 % Escalón 0 -> 0.40 m. RMSE y error máximo MiL vs PiL.
-Se aplicó un escalón de referencia de \SIrange{0}{0.40}{m} en $t=\SI{0.5}{s}$ y se simularon \SI{4}{s}. En el PiL ideal, la posición se envía al MCU sin modelo de sensor; la única diferencia con el MiL es que el controlador corre en el ATmega328P con aritmética de punto flotante de 32 bits y que la posición, la referencia y el comando viajan cuantizados por la trama (\SI{0.01}{mm} y $1/32767$). La Fig.~\ref{fig:ideal} compara ambas respuestas. A partir del escalón ($t\geq\SI{0.5}{s}$), el error RMS entre ellas es de \SI{0.0036}{mm} y el error máximo, de \SI{0.0061}{mm}; en las 401 tramas intercambiadas se detectaron 0 errores de \textit{checksum}, igual que en las otras cuatro corridas PiL. Antes del escalón la diferencia es algo mayor: el transitorio inicial de presión desplaza levemente el vástago y lo lleva a posiciones negativas, que la trama, por usar enteros sin signo, recorta a cero. Este efecto queda fuera de la ventana de las métricas y no altera la respuesta al escalón.
+Se aplicó un escalón de referencia de \SIrange{0}{0.40}{m} en $t=\SI{0.5}{s}$ y se simularon \SI{4}{s}. En el PiL ideal, la posición se envía al MCU sin modelo de sensor; la única diferencia con el MiL es que el controlador corre como código C generado en el ATmega328P en lugar de simularse en el PC. La Fig.~\ref{fig:ideal} compara ambas respuestas: en las 401 muestras de la corrida, la posición y el comando del PiL ideal coinciden exactamente con los del MiL (error RMS y error máximo nulos). Esto confirma que el código generado reproduce bit a bit la simulación del controlador en precisión simple y que el intercambio con el MCU, en \textit{lockstep}, no introduce diferencias.
 
 \begin{figure}[H]
 \centering
@@ -225,7 +212,7 @@ Se aplicó un escalón de referencia de \SIrange{0}{0.40}{m} en $t=\SI{0.5}{s}$ 
 \label{sec:noideal}
 % Al menos 3 no idealidades nuevas, con fuente. Una corrida por cada una y todas juntas.
 
-Se implementaron tres no idealidades en el modelo del sensor, del lado de Simulink, en el orden sesgo, histéresis (\textit{backlash}) y cuantización, de modo que el MCU recibe la posición tal como la entregaría el ADC. Los valores del sensor se tomaron de la hoja de datos del fabricante \cite{rexroth} y se refieren a la carrera $L_{cyl}=\SI{0.45}{m}$. El error de linealidad es de $\pm\SI{0.02}{\percent}$ de la longitud de medición, es decir, $\pm\SI{0.09}{mm}$, y se modela en el peor caso como un sesgo constante. La histéresis es de \SI{0.004}{mm}. La cuantización sigue \eqref{eq:resolucion} y es la no idealidad de medición de mayor magnitud. La repetibilidad del sensor ($\pm\SI{0.0045}{mm}$) es dos órdenes de magnitud menor que la cuantización y no se modela. El límite de velocidad del fabricante (\SI{0.5}{m/s}) tampoco se incluye, ya que, como se mostró en la Sec.~\ref{sec:planta}, la velocidad máxima del MiL es de aproximadamente \SI{0.40}{m/s}. Se realizó una corrida con cada no idealidad por separado y una con las tres juntas.
+Se implementaron tres no idealidades en el modelo del sensor, del lado de Simulink, con los bloques Bias, Backlash, Quantizer y Saturation (Fig.~\ref{fig:simpil}), en el orden sesgo, histéresis (\textit{backlash}) y cuantización, de modo que el MCU recibe la posición tal como la entregaría el ADC. Los valores del sensor se tomaron de la hoja de datos del fabricante \cite{rexroth} y se refieren a la carrera $L_{cyl}=\SI{0.45}{m}$. El error de linealidad es de $\pm\SI{0.02}{\percent}$ de la longitud de medición, es decir, $\pm\SI{0.09}{mm}$, y se modela en el peor caso como un sesgo constante. La histéresis es de \SI{0.004}{mm}. La cuantización sigue \eqref{eq:resolucion} y es la no idealidad de medición de mayor magnitud. La repetibilidad del sensor ($\pm\SI{0.0045}{mm}$) es dos órdenes de magnitud menor que la cuantización y no se modela. El límite de velocidad del fabricante (\SI{0.5}{m/s}) tampoco se incluye, ya que, como se mostró en la Sec.~\ref{sec:planta}, la velocidad máxima del MiL es de aproximadamente \SI{0.40}{m/s}. Se realizó una corrida con cada no idealidad por separado y una con las tres juntas.
 
 \begin{table}[H]
 \centering
@@ -257,7 +244,7 @@ La Fig.~\ref{fig:comparacion} muestra la posición y el comando en los tres caso
 \end{figure}
 
 \subsection{Métricas de desempeño}
-La Tabla~\ref{tab:metricas} resume las métricas de los tres casos, calculadas desde el escalón ($t\geq\SI{0.5}{s}$); el error en estado estacionario es el promedio del error en el último segundo. El tiempo de subida (\SI{0.73}{s}) y el de asentamiento (\SI{1.05}{s}) coinciden en los tres casos con la resolución de $T_s$, y el RMS del comando es 0.528 en todos ellos, porque el recorrido está dominado por la saturación. El PiL ideal reproduce el MiL hasta la tercera cifra: $M_p=\SI{3.42}{\percent}$ frente a \SI{3.43}{\percent} y $e_{ss}=\SI{0.016}{mm}$ en ambos. En el PiL no ideal el sobreimpulso sube a \SI{3.47}{\percent} (\SI{13.87}{mm}) y el error en estado estacionario a \SI{0.058}{mm}, con un error RMS de \SI{0.177}{mm} y un error máximo de \SI{0.511}{mm} respecto al MiL.
+La Tabla~\ref{tab:metricas} resume las métricas de los tres casos, calculadas desde el escalón ($t\geq\SI{0.5}{s}$); el error en estado estacionario es el promedio del error en el último segundo. El tiempo de subida (\SI{0.73}{s}) y el de asentamiento (\SI{1.05}{s}) coinciden en los tres casos con la resolución de $T_s$, y el RMS del comando es 0.528 en todos ellos, porque el recorrido está dominado por la saturación. El PiL ideal coincide exactamente con el MiL en todas las métricas: $M_p=\SI{3.43}{\percent}$ y $e_{ss}=\SI{0.014}{mm}$. En el PiL no ideal el sobreimpulso sube a \SI{3.47}{\percent} (\SI{13.88}{mm}) y el error en estado estacionario a \SI{0.047}{mm}, con un error RMS de \SI{0.160}{mm} y un error máximo de \SI{0.521}{mm} respecto al MiL.
 
 \begin{table}[H]
 \centering
@@ -268,24 +255,24 @@ La Tabla~\ref{tab:metricas} resume las métricas de los tres casos, calculadas d
 \toprule
 Métrica & Req. & MiL & PiL ideal & PiL no ideal \\
 \midrule
-$M_p$ (\%) & $<10$ & 3.43 & 3.42 & 3.47 \\
+$M_p$ (\%) & $<10$ & 3.43 & 3.43 & 3.47 \\
 $t_r$ (s) & -- & 0.73 & 0.73 & 0.73 \\
 $t_s$ 2\,\% (s) & -- & 1.05 & 1.05 & 1.05 \\
-$e_{ss}$ (mm) & $<2.3$ & 0.016 & 0.016 & 0.058 \\
+$e_{ss}$ (mm) & $<2.3$ & 0.014 & 0.014 & 0.047 \\
 RMS($u$) & -- & 0.528 & 0.528 & 0.528 \\
-RMSE vs MiL (mm) & -- & -- & 0.0036 & 0.177 \\
-$e_{\max}$ vs MiL (mm) & -- & -- & 0.0061 & 0.511 \\
+RMSE vs MiL (mm) & -- & -- & 0 & 0.160 \\
+$e_{\max}$ vs MiL (mm) & -- & -- & 0 & 0.521 \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
 \subsection{Análisis de la degradación}
 % MiL -> PiL ideal; PiL ideal -> no ideal (cuál domina); cumplimiento con márgenes.
-El paso de MiL a PiL ideal introduce una diferencia de apenas \SI{0.0036}{mm} RMS (\SI{0.0061}{mm} como máximo). Como la simulación corre en \textit{lockstep}, esta diferencia no proviene de la latencia de la UART, sino de la aritmética de punto flotante de 32 bits del AVR, frente a la de 64 bits de MATLAB, y de la cuantización de la trama (\SI{0.01}{mm} en posición y referencia, $1/32767$ en el comando). Ninguna de las 2005 tramas de las cinco corridas PiL (401 por corrida) presentó errores de \textit{checksum}, por lo que el canal de comunicación no aporta degradación.
+El paso de MiL a PiL ideal no introduce ninguna diferencia: error nulo en las 401 muestras. Como la simulación corre en \textit{lockstep}, la latencia de la UART no llega a la planta, y como el MiL ya simula el controlador en precisión simple, la aritmética de 32 bits del AVR tampoco produce diferencias. El código generado es, por tanto, una implementación fiel del controlador diseñado, y toda la degradación del caso no ideal proviene de la medición.
 
-La Tabla~\ref{tab:degradacion} y la Fig.~\ref{fig:noideal} separan el aporte de cada no idealidad. La cuantización del ADC es la causa principal de la degradación: por sí sola produce un error RMS de \SI{0.113}{mm} y un error máximo de \SI{0.253}{mm} respecto al MiL, y genera la oscilación sostenida alrededor de la referencia, de amplitud menor a un paso del ADC (\SI{0.44}{mm}). El error de linealidad le sigue con \SI{0.091}{mm} RMS, pero domina el error en estado estacionario (\SI{0.074}{mm}): como el PI regula la posición medida, la posición real tiende a quedar desplazada en el sesgo de \SI{0.09}{mm}, y la integral, con $K_i=1$, aún no lo alcanza a los \SI{4}{s}. La histéresis de \SI{0.004}{mm} es despreciable (\SI{0.0062}{mm} RMS, $e_{ss}=\SI{0.016}{mm}$, igual al ideal). Los efectos no se suman linealmente: con las tres juntas, el error RMS es de \SI{0.177}{mm} y el error máximo de \SI{0.511}{mm}, pero el $e_{ss}$ (\SI{0.058}{mm}) es menor que con el sesgo solo: como el sesgo (\SI{0.09}{mm}) es una fracción del paso del ADC (\SI{0.44}{mm}), el redondeo enmascara parte de él.
+La Tabla~\ref{tab:degradacion} y la Fig.~\ref{fig:noideal} separan el aporte de cada no idealidad. La cuantización del ADC es la causa principal de la degradación: por sí sola produce un error RMS de \SI{0.121}{mm} y un error máximo de \SI{0.256}{mm} respecto al MiL, y genera la oscilación sostenida alrededor de la referencia, de amplitud menor a un paso del ADC (\SI{0.44}{mm}). El error de linealidad le sigue con \SI{0.089}{mm} RMS, pero domina el error en estado estacionario (\SI{0.076}{mm}): como el PI regula la posición medida, la posición real tiende a quedar desplazada en el sesgo de \SI{0.09}{mm}, y la integral, con $K_i=1$, aún no lo alcanza a los \SI{4}{s}. La histéresis de \SI{0.004}{mm} es despreciable (\SI{0.0048}{mm} RMS, $e_{ss}=\SI{0.014}{mm}$, igual al ideal). Los efectos no se suman linealmente: con las tres juntas, el error RMS es de \SI{0.160}{mm} y el error máximo de \SI{0.521}{mm}, pero el $e_{ss}$ (\SI{0.047}{mm}) es menor que con el sesgo solo: como el sesgo (\SI{0.09}{mm}) es una fracción del paso del ADC (\SI{0.44}{mm}), el redondeo enmascara parte de él.
 
-Aun en el caso no ideal, el controlador cumple ambos requisitos con amplio margen: $M_p=\SI{3.47}{\percent}$ frente al límite de \SI{10}{\percent} (margen de \num{6.53} puntos porcentuales) y $e_{ss}=\SI{0.058}{mm}$ frente a \SI{2.3}{mm} (margen de \SI{2.24}{mm}, unas 40 veces por debajo del límite).
+Aun en el caso no ideal, el controlador cumple ambos requisitos con amplio margen: $M_p=\SI{3.47}{\percent}$ frente al límite de \SI{10}{\percent} (margen de \num{6.53} puntos porcentuales) y $e_{ss}=\SI{0.047}{mm}$ frente a \SI{2.3}{mm} (margen de \SI{2.25}{mm}, unas 49 veces por debajo del límite).
 
 \begin{table}[H]
 \centering
@@ -296,11 +283,11 @@ Aun en el caso no ideal, el controlador cumple ambos requisitos con amplio marge
 \toprule
 Caso & $M_p$ (\%) & $e_{ss}$ (mm) & RMSE (mm) & $e_{\max}$ (mm) \\
 \midrule
-Ideal & 3.42 & 0.016 & 0.0036 & 0.0061 \\
-Cuantización & 3.41 & 0.031 & 0.113 & 0.253 \\
-Linealidad & 3.40 & 0.074 & 0.091 & 0.095 \\
-Histéresis & 3.42 & 0.016 & 0.0062 & 0.012 \\
-Todas & 3.47 & 0.058 & 0.177 & 0.511 \\
+Ideal & 3.43 & 0.014 & 0 & 0 \\
+Cuantización & 3.41 & 0.024 & 0.121 & 0.256 \\
+Linealidad & 3.40 & 0.076 & 0.089 & 0.092 \\
+Histéresis & 3.42 & 0.014 & 0.0048 & 0.0098 \\
+Todas & 3.47 & 0.047 & 0.160 & 0.521 \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -312,37 +299,15 @@ Todas & 3.47 & 0.058 & 0.177 & 0.511 \\
 \label{fig:noideal}
 \end{figure}
 
-\subsection{Comparación con el PIL de Simulink}
-La Tabla~\ref{tab:piloficial} resume los mismos seis casos corridos con el flujo PIL de Simulink (Sec.~\ref{sec:pil_oficial}). En este caso el MiL es el mismo modelo con el bloque Model en modo Normal. El PiL ideal coincide exactamente con él (error nulo en las 401 muestras): el código C generado reproduce bit a bit la simulación del controlador en precisión simple. Las conclusiones sobre las no idealidades se mantienen: la cuantización del ADC sigue siendo la dominante (\SI{0.121}{mm} RMS), el error de linealidad es el que más eleva el $e_{ss}$ (\SI{0.076}{mm}) y la histéresis es despreciable. Con las tres juntas, $M_p=\SI{3.47}{\percent}$ y $e_{ss}=\SI{0.047}{mm}$, de nuevo dentro de los requisitos con amplio margen.
-
-\begin{table}[H]
-\centering
-\caption{Resultados con el flujo PIL de Simulink}
-\label{tab:piloficial}
-\small
-\begin{tabularx}{\columnwidth}{lCCCC}
-\toprule
-Caso & $M_p$ (\%) & $e_{ss}$ (mm) & RMSE (mm) & $e_{\max}$ (mm) \\
-\midrule
-MiL (Normal) & 3.43 & 0.014 & -- & -- \\
-Ideal & 3.43 & 0.014 & 0 & 0 \\
-Cuantización & 3.41 & 0.024 & 0.121 & 0.256 \\
-Linealidad & 3.40 & 0.076 & 0.089 & 0.092 \\
-Histéresis & 3.42 & 0.014 & 0.0048 & 0.0098 \\
-Todas & 3.47 & 0.047 & 0.160 & 0.521 \\
-\bottomrule
-\end{tabularx}
-\end{table}
-
 % =====================================================================
 \section{Conclusiones}
 \label{sec:conclusiones}
 % 3--4 conclusiones con número, limitaciones y trabajo futuro.
 \begin{itemize}
-\item El controlador PI ejecutado en el ATmega328P reproduce la simulación MiL: el error RMS entre ambas es de \SI{0.0036}{mm} y el sobreimpulso y el error en estado estacionario coinciden (\SI{3.42}{\percent} frente a \SI{3.43}{\percent}; \SI{0.016}{mm}). La aritmética de 32 bits y la cuantización de la trama no afectan el desempeño.
-\item El protocolo de seis bytes con \textit{checksum} XOR resultó confiable: 2005 tramas intercambiadas en cinco corridas, sin ningún error.
-\item La cuantización del ADC de 10 bits es la no idealidad dominante (\SI{0.113}{mm} RMS frente a \SI{0.091}{mm} del error de linealidad y \SI{0.0062}{mm} de la histéresis), mientras que el error de linealidad es el que más eleva el error en estado estacionario (\SI{0.074}{mm}).
-\item Con todas las no idealidades, el sistema cumple los requisitos con amplio margen: $M_p=\SI{3.47}{\percent}<\SI{10}{\percent}$ y $e_{ss}=\SI{0.058}{mm}<\SI{2.3}{mm}$.
+\item El código C generado por Embedded Coder y ejecutado en el ATmega328P reproduce exactamente la simulación MiL del controlador: error nulo en las 401 muestras, con $M_p=\SI{3.43}{\percent}$ y $e_{ss}=\SI{0.014}{mm}$ en ambos casos.
+\item El flujo PIL de Simulink compila, carga y ejecuta el controlador en la placa sin modificar el modelo de diseño; solo exige una interfaz en precisión simple, porque en el AVR un \texttt{double} ocupa 4 bytes.
+\item La cuantización del ADC de 10 bits es la no idealidad dominante (\SI{0.121}{mm} RMS frente a \SI{0.089}{mm} del error de linealidad y \SI{0.0048}{mm} de la histéresis), mientras que el error de linealidad es el que más eleva el error en estado estacionario (\SI{0.076}{mm}).
+\item Con todas las no idealidades, el sistema cumple los requisitos con amplio margen: $M_p=\SI{3.47}{\percent}<\SI{10}{\percent}$ y $e_{ss}=\SI{0.047}{mm}<\SI{2.3}{mm}$.
 \end{itemize}
 
 Como limitaciones, el PiL se realizó para un solo pistón y no para las tres patas de MARLUP, y la ejecución en \textit{lockstep} no representa la latencia real de la UART ni la variabilidad del tiempo de cómputo. Como trabajo futuro se propone un PiL en tiempo real, en el que el MCU imponga su propio periodo de muestreo, y extender la validación a las tres patas con el controlador de nivelación completo.
@@ -362,6 +327,6 @@ Como limitaciones, el PiL se realizó para un solo pistón y no para las tres pa
 \section*{Anexo: reproducibilidad}
 % Enlace al repositorio (commit), .slx, código del MCU, script de métricas,
 % datos crudos, README, video si existe.
-Repositorio: \url{https://github.com/aasalas/LAB-DE-CONTROL-GR5}, commit \texttt{1f89753}. En \texttt{MODELOS/PISTON}: modelo \texttt{PiL.slx}, controlador del lado de Simulink \texttt{pil\_ctrl.m}, código del MCU \texttt{pil\_arduino/pil\_arduino.ino}, carga del programa \texttt{subir\_arduino.m}, corridas y métricas \texttt{run\_pil\_all.m} (todo el flujo con \texttt{correr\_todo.m}) y datos crudos en \texttt{resultados/}. El PIL de Simulink (commit \texttt{8970620}) está en \texttt{PiL\_oficial.slx} y \texttt{ctrl\_pi.slx}, se arma con \texttt{pil\_oficial\_setup.m}, se corre con \texttt{run\_pil\_oficial.m} y sus datos están en \texttt{resultados/pil\_oficial/}.
+Repositorio: \url{https://github.com/aasalas/LAB-DE-CONTROL-GR5}, commit [ ]. En \texttt{MODELOS/PISTON}: modelo host \texttt{PiL.slx} y controlador \texttt{ctrl\_pi.slx}; corridas, métricas y figuras con \texttt{run\_pil.m} (usa \texttt{pil\_puerto.m}, \texttt{metricas\_pil.m} y \texttt{figuras\_pil.m}); métricas, registro y datos crudos por caso en \texttt{resultados/}. Los pasos para reproducirlo están en el \texttt{README.md}.
 
 \end{document}

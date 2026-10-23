@@ -1,10 +1,10 @@
 % Figura: lazo PiL como diagrama de bloques de control (MARLUP, Actividad 3)
 % Compilar este archivo solo:  pdflatex arquitectura_pil.tex  -> arquitectura_pil.pdf
 % En el reporte:  \includegraphics[width=\columnwidth]{figuras/arquitectura_pil.pdf}
-% Refleja la implementacion real (pil_ctrl.m + pil_arduino.ino):
+% Refleja la implementacion (PiL.slx + ctrl_pi.slx, flujo PIL de Simulink):
 %  - el modelo del sensor (sesgo, histeresis, ADC 10 bits) y la referencia estan en Simulink;
-%  - la trama 0xAA lleva x medida y x_ref en unidades de 0.01 mm; el MCU las escala a metros;
-%  - el MCU devuelve u (int16, u*32767) en la trama 0x55; en el PiL no se genera PWM;
+%  - el bloque Model en modo PIL envia x medida y x_ref (single, en metros) al codigo generado
+%    de ctrl_pi en el Arduino y recibe u (single); en el PiL no se genera PWM;
 %  - lockstep: Simulink espera u[k] antes de avanzar, la latencia de la UART no llega a la planta.
 \documentclass[tikz,border=3pt]{standalone}
 \usepackage[utf8]{inputenc}
@@ -61,11 +61,11 @@
 \draw[->, line width=0.6pt, dashed, draw=naranjaMCU]
   (sat.north) -- (cl) -| node[pos=0.25, below, font=\scriptsize, text=naranjaMCU, inner sep=1.5pt]{clamping} (C.north);
 
-\node[bMCU] (esc) at (3.35,\yR) {$K_s$\\[-1pt]\scriptsize a metros};
+\coordinate (esc) at (3.35,{\yR-0.45});   % borde inferior del MCU
 
-% ---------------- Enlace serial (tramas de 6 bytes) ----------------
-\node[bSer] (serF) at (5.6,\yF) {\scriptsize trama\\[-1pt]\scriptsize \texttt{0x55}};
-\node[bSer] (serR) at (5.6,\yR) {\scriptsize trama\\[-1pt]\scriptsize \texttt{0xAA}};
+% ---------------- Enlace PIL (serie, codigo generado por Embedded Coder) ----------------
+\node[bSer] (serF) at (5.6,\yF) {\scriptsize PIL\\[-1pt]\scriptsize salida};
+\node[bSer] (serR) at (5.6,\yR) {\scriptsize PIL\\[-1pt]\scriptsize entradas};
 
 % ---------------- PC: válvula, cilindro, sensor y referencia ----------------
 \node[bPC] (act) at (7.15,\yF) {$G_v(s)$\\[-1pt]\scriptsize válvula};
@@ -101,9 +101,8 @@
 \draw[senal] (his) -- (adc);
 \draw[serial] (adc) -- node[etq, text=bermellon]{$\hat{x}$} (serR);
 \draw[serial] (ref.west) -| (serR.south);
-\draw[serial] (serR) -- node[etq, text=bermellon]{$\hat{x},\,x_{ref}$} (esc);
-\draw[senal] ($(esc.west)+(0,0.2)$) -| node[pos=0.25, etq]{$\hat{x}$} (sum.south);
-\draw[senal] ($(esc.west)+(0,-0.2)$) -- (0.0,{\yR-0.2}) |- node[pos=0.3, left, font=\scriptsize, inner sep=1.5pt]{$x_{ref}$} (sum.west);
+\draw[serial] ($(serR.west)+(0,0.2)$) -| node[pos=0.25, etq, text=bermellon]{$\hat{x}$} (sum.south);
+\draw[serial] ($(serR.west)+(0,-0.2)$) -- (0.0,{\yR-0.2}) |- node[pos=0.3, left, font=\scriptsize, inner sep=1.5pt]{$x_{ref}$} (sum.west);
 
 % ---------------- Anotaciones del enlace ----------------
 \node[font=\scriptsize\bfseries, text=bermellon] at (5.6,0.95) {UART 115200 baud};
