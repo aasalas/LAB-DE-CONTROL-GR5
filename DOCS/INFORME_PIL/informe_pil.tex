@@ -104,8 +104,7 @@ La planta se simula en MATLAB/Simulink R2026a con un solver de paso fijo \texttt
 
 \begin{figure}[H]
 \centering
-% TODO: falta figuras/arquitectura_pil.pdf (no existe en el repo); mientras tanto se muestra un marcador
-\IfFileExists{figuras/arquitectura_pil.pdf}{\includegraphics[width=\columnwidth]{figuras/arquitectura_pil.pdf}}{\fbox{\parbox[c][3cm][c]{0.9\columnwidth}{\centering Arquitectura PiL (figura pendiente)}}}
+\includegraphics[width=\columnwidth]{figuras/arquitectura_pil.pdf}   % fuente: figuras/arquitectura_pil.tex
 \caption{Arquitectura PiL: planta y modelos de sensor/actuador en Simulink, controlador en el MCU.}
 \label{fig:arq}
 \end{figure}
@@ -121,6 +120,25 @@ La comunicación entre Simulink y el Arduino UNO R3 se realiza por UART con tram
 \IfFileExists{figuras/trama_uart.pdf}{\includegraphics[width=\columnwidth]{figuras/trama_uart.pdf}}{\fbox{\parbox[c][2cm][c]{0.9\columnwidth}{\centering Trama UART de 6 bytes (figura pendiente)}}}
 \caption{Trama UART de seis bytes entre Simulink y el Arduino.}
 \label{fig:trama}
+\end{figure}
+
+\subsection{Validación con el flujo PIL de Simulink}
+\label{sec:pil_oficial}
+Como verificación independiente del protocolo propio, el lazo se repitió con el flujo \textit{Processor-in-the-Loop} de Simulink (Embedded Coder y el \textit{Simulink Support Package for Arduino Hardware}). El controlador se separó en el modelo \texttt{ctrl\_pi.slx} (Fig.~\ref{fig:simctrl}): un bloque Discrete PID Controller en forma PI, con integrador trapezoidal (Tustin), $K_p=60$, $K_i=1$, $T_s=\SI{10}{ms}$, saturación en $\pm1$ y anti-windup por \textit{clamping}, es decir, la misma ley \eqref{eq:pi}. Este modelo se referencia desde \texttt{PiL\_oficial.slx} (Fig.~\ref{fig:simpil}) con un bloque Model en modo PIL: Embedded Coder genera el código C, lo compila para el ATmega328P y lo carga en la placa, y Simulink intercambia las entradas y la salida con el MCU por COM6 a \SI{115200}{baud}, también en \textit{lockstep}. Como en el AVR un \texttt{double} ocupa 4 bytes, la interfaz del controlador es de precisión simple y el modelo host convierte los tipos a la entrada y a la salida. Las no idealidades del sensor de la Sec.~\ref{sec:noideal} aparecen en este modelo como bloques de Simulink en el camino de realimentación: sesgo, histéresis (\textit{backlash}), cuantización y rango del ADC.
+
+% A doble columna para que el diagrama sea legible (figure* no admite [H])
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.85\textwidth]{figuras/simulink_pil_oficial.pdf}
+\caption{Modelo \texttt{PiL\_oficial.slx}: el bloque Controlador referencia \texttt{ctrl\_pi} en modo PIL; abajo, el modelo del sensor con sus no idealidades.}
+\label{fig:simpil}
+\end{figure*}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.75\columnwidth]{figuras/simulink_ctrl_pi.pdf}
+\caption{Modelo \texttt{ctrl\_pi.slx}, compilado y ejecutado en el Arduino UNO R3.}
+\label{fig:simctrl}
 \end{figure}
 
 
@@ -294,6 +312,28 @@ Todas & 3.47 & 0.058 & 0.177 & 0.511 \\
 \label{fig:noideal}
 \end{figure}
 
+\subsection{Comparación con el PIL de Simulink}
+La Tabla~\ref{tab:piloficial} resume los mismos seis casos corridos con el flujo PIL de Simulink (Sec.~\ref{sec:pil_oficial}). En este caso el MiL es el mismo modelo con el bloque Model en modo Normal. El PiL ideal coincide exactamente con él (error nulo en las 401 muestras): el código C generado reproduce bit a bit la simulación del controlador en precisión simple. Las conclusiones sobre las no idealidades se mantienen: la cuantización del ADC sigue siendo la dominante (\SI{0.121}{mm} RMS), el error de linealidad es el que más eleva el $e_{ss}$ (\SI{0.076}{mm}) y la histéresis es despreciable. Con las tres juntas, $M_p=\SI{3.47}{\percent}$ y $e_{ss}=\SI{0.047}{mm}$, de nuevo dentro de los requisitos con amplio margen.
+
+\begin{table}[H]
+\centering
+\caption{Resultados con el flujo PIL de Simulink}
+\label{tab:piloficial}
+\small
+\begin{tabularx}{\columnwidth}{lCCCC}
+\toprule
+Caso & $M_p$ (\%) & $e_{ss}$ (mm) & RMSE (mm) & $e_{\max}$ (mm) \\
+\midrule
+MiL (Normal) & 3.43 & 0.014 & -- & -- \\
+Ideal & 3.43 & 0.014 & 0 & 0 \\
+Cuantización & 3.41 & 0.024 & 0.121 & 0.256 \\
+Linealidad & 3.40 & 0.076 & 0.089 & 0.092 \\
+Histéresis & 3.42 & 0.014 & 0.0048 & 0.0098 \\
+Todas & 3.47 & 0.047 & 0.160 & 0.521 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
 % =====================================================================
 \section{Conclusiones}
 \label{sec:conclusiones}
@@ -322,6 +362,6 @@ Como limitaciones, el PiL se realizó para un solo pistón y no para las tres pa
 \section*{Anexo: reproducibilidad}
 % Enlace al repositorio (commit), .slx, código del MCU, script de métricas,
 % datos crudos, README, video si existe.
-Repositorio: \url{https://github.com/aasalas/LAB-DE-CONTROL-GR5}, commit \texttt{1f89753}. En \texttt{MODELOS/PISTON}: modelo \texttt{PiL.slx}, controlador del lado de Simulink \texttt{pil\_ctrl.m}, código del MCU \texttt{pil\_arduino/pil\_arduino.ino}, carga del programa \texttt{subir\_arduino.m}, corridas y métricas \texttt{run\_pil\_all.m} (todo el flujo con \texttt{correr\_todo.m}) y datos crudos en \texttt{resultados/}.
+Repositorio: \url{https://github.com/aasalas/LAB-DE-CONTROL-GR5}, commit \texttt{1f89753}. En \texttt{MODELOS/PISTON}: modelo \texttt{PiL.slx}, controlador del lado de Simulink \texttt{pil\_ctrl.m}, código del MCU \texttt{pil\_arduino/pil\_arduino.ino}, carga del programa \texttt{subir\_arduino.m}, corridas y métricas \texttt{run\_pil\_all.m} (todo el flujo con \texttt{correr\_todo.m}) y datos crudos en \texttt{resultados/}. El PIL de Simulink (commit \texttt{8970620}) está en \texttt{PiL\_oficial.slx} y \texttt{ctrl\_pi.slx}, se arma con \texttt{pil\_oficial\_setup.m}, se corre con \texttt{run\_pil\_oficial.m} y sus datos están en \texttt{resultados/pil\_oficial/}.
 
 \end{document}
