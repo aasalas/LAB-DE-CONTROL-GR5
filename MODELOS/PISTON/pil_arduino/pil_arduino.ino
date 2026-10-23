@@ -25,6 +25,7 @@ void enviar(uint8_t h, int16_t ui, uint8_t est) {
 
 void setup() {
   Serial.begin(115200);
+  pinMode(LED_BUILTIN, OUTPUT);                  // LED 13 encendido = valvula saturada
 }
 
 void loop() {
@@ -39,6 +40,7 @@ void loop() {
   }
   if (h == H_RST) {                              // reinicio de estados
     I1 = 0.0f; e1 = 0.0f; ulast = 0.0f; seq = 0;
+    digitalWrite(LED_BUILTIN, LOW);
     enviar(H_ACK, 0, 0);
     return;
   }
@@ -57,6 +59,7 @@ void loop() {
   if (u < -USAT) u = -USAT;
   if (!((v > USAT && e > 0) || (v < -USAT && e < 0))) I1 = In;  // clamping
   e1 = e; ulast = u;
+  digitalWrite(LED_BUILTIN, (u >= USAT || u <= -USAT) ? HIGH : LOW);
   seq++;
   enviar(H_OUT, (int16_t)lroundf(u * 32767.0f), 0);
 }

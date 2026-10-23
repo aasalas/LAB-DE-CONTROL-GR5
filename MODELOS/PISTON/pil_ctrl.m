@@ -8,6 +8,9 @@ persistent u1 e1 xb k
 if isempty(k)
     u1 = 0; e1 = 0; k = 0; xb = x;
 end
+demo = isfield(PIL, 'demo');                          % demo_pil: perfil de referencia y tablero
+if demo, ref = PIL.demo.ref(k*0.01); end
+f = []; r = []; rtt = NaN;
 
 % ---- Modelo del sensor (Bias -> Backlash -> Quantizer) ----
 xm = x;
@@ -38,8 +41,11 @@ else
     xb8 = typecast(xi, 'uint8'); rb8 = typecast(ri, 'uint8');
     f = uint8([170 xb8 rb8 0]);
     f(6) = bitxor(bitxor(bitxor(bitxor(f(1), f(2)), f(3)), f(4)), f(5));
+    if demo && k == PIL.demo.kfalla, f(6) = bitxor(f(6), 255); end   % trama corrupta a proposito
+    t0 = tic;
     write(PIL.sp, f, 'uint8');
     r = uint8(read(PIL.sp, 6, 'uint8'));
+    rtt = toc(t0);
     chk = bitxor(bitxor(bitxor(bitxor(r(1), r(2)), r(3)), r(4)), r(5));
     if numel(r) ~= 6 || r(1) ~= 85 || chk ~= r(6)
         PIL.nerr = PIL.nerr + 1;
@@ -53,5 +59,6 @@ end
 
 PIL.ulast = u;
 PIL.log(end+1, :) = [k*0.01, ref, x, xm, u, est];
+if demo, PIL.demo.actualizar(k, ref, x, xm, u, est, rtt, f, r); end
 k = k + 1;
 end
