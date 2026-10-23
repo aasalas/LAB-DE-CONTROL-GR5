@@ -55,8 +55,8 @@ CH340) conectado por USB.
 2. **Conectar solo el Arduino.** Para ver su puerto: `serialportlist("available")` en
    MATLAB, o el Administrador de dispositivos de Windows ("Puertos (COM y LPT)").
    Ejecute un solo MATLAB a la vez.
-3. **Correr los 6 casos** desde la raíz del repositorio (varios minutos; cada caso PIL
-   compila y carga el código al Arduino):
+3. **Correr los 6 casos** desde la raíz del repositorio (unos 3 minutos: el primer caso
+   PIL compila el controlador y lo carga al Arduino; los siguientes reutilizan el programa):
    ```bash
    matlab -batch "cd('MODELOS/PISTON'); run_pil"
    ```

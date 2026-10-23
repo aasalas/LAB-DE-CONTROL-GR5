@@ -8,9 +8,6 @@ here = fileparts(mfilename('fullpath'));
 cd(here);
 run(fullfile(here, '..', 'CINEMATICA', 'MARLUP_hydr_params.m'));
 if ~exist('PIL_PORT', 'var'), pil_puerto; else, pil_puerto(PIL_PORT); end
-% Si el codigo de ctrl_pi se da por "al dia" (carpeta slprj o cache ctrl_pi.slxc), la aplicacion
-% PIL se arma sin wrapper.mk y el make falla; se fuerza una compilacion limpia antes de cada caso PIL.
-pild = fullfile('slprj', 'ert', 'ctrl_pi');
 m = 'PiL'; load_system(m);
 outd = 'resultados'; figd = 'figuras';
 if ~isfolder(outd), mkdir(outd); end
@@ -26,19 +23,24 @@ casos = {'MiL',        'Normal', [0 0 0];
          'PiL_todas',  pil,      [1 1 1]};
 
 q = 0.45/1024;                                         % ADC de 10 bits sobre 450 mm
-R = struct();
+R = struct(); limpio = false;
 for c = 1:size(casos, 1)
     nom = casos{c,1}; en = casos{c,3};
     sens = struct('bias', 0.09e-3*en(1), 'backlash', 0.004e-3*en(2), ...
                   'q', 1e-12, 'xmin', -inf, 'xmax', inf);   % sin ADC: intervalo despreciable
     if en(3), sens.q = q; sens.xmin = 0; sens.xmax = 1023*q; end
     set_param([m '/Controlador'], 'SimulationMode', casos{c,2});
-    if strcmp(casos{c,2}, pil)
-        clear mex
-        if isfolder(pild), rmdir(pild, 's'); end
-        if isfile('ctrl_pi.slxc'), delete('ctrl_pi.slxc'); end
+    if strcmp(casos{c,2}, pil) && ~limpio, limpiar_pil; limpio = true; end   % compila una sola vez
+    tic;
+    try
+        out = sim(m, 'StopTime', '4', 'ReturnWorkspaceOutputs', 'on');
+    catch err
+        if ~strcmp(casos{c,2}, pil), rethrow(err); end
+        fprintf('%s: fallo la aplicacion PIL, se recompila (%s)\n', nom, err.message);
+        limpiar_pil;
+        out = sim(m, 'StopTime', '4', 'ReturnWorkspaceOutputs', 'on');
     end
-    tic; out = sim(m, 'StopTime', '4', 'ReturnWorkspaceOutputs', 'on'); dt = toc;
+    dt = toc;
     n = numel(out.log_x); t = (0:n-1)'*0.01;
     L = [t out.log_ref(:) out.log_x(:) out.log_xm(:) out.log_u(:)];
     R.(nom) = L;
@@ -55,3 +57,12 @@ fprintf(logf, 'OK\n'); fclose(logf);
 save(fullfile(outd, 'resultados_pil.mat'), 'R', 'M');
 set_param([m '/Controlador'], 'SimulationMode', pil); save_system(m);   % queda abierto en modo PIL
 disp('run_pil OK');
+
+function limpiar_pil
+% Si el codigo de ctrl_pi se da por "al dia" (carpeta slprj o cache ctrl_pi.slxc), la aplicacion
+% PIL se arma sin wrapper.mk y el make falla; borrarlos fuerza una compilacion limpia.
+clear mex
+d = fullfile('slprj', 'ert', 'ctrl_pi');
+if isfolder(d), rmdir(d, 's'); end
+if isfile('ctrl_pi.slxc'), delete('ctrl_pi.slxc'); end
+end
