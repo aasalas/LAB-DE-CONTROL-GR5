@@ -1,0 +1,19 @@
+
+Status Class     FriendlyName                      InstanceId                                   
+------ -----     ------------                      ----------                                   
+OK     USB       Concentrador raíz USB (USB 3.0)   USB\ROOT_HUB30\5&3B2FA2CD&0&0                
+OK     USB       Concentrador raíz USB (USB 3.0)   USB\ROOT_HUB30\5&182E0070&0&0                
+OK     Camera    Integrated Camera                 USB\VID_13D3&PID_56F7&MI_00\7&4F0BC6F&0&0000 
+OK     Ports     USB-SERIAL CH340 (COM6)           USB\VID_1A86&PID_7523\6&11941ADF&0&2         
+OK     USB       Concentrador USB genérico         USB\VID_0BDA&PID_5411\7&4CC7729&0&2          
+OK     USB       Concentrador USB genérico         USB\VID_0BDA&PID_5411\6&11941ADF&0&1         
+OK     Biometric Synaptics UWP WBDI                USB\VID_06CB&PID_00BE\EFAFAE1AE366           
+OK     HIDClass  Dispositivo de entrada USB        USB\VID_145F&PID_030E&MI_00\7&10F35153&0&0000
+OK     Bluetooth Realtek Bluetooth Adapter         USB\VID_0BDA&PID_4852\00E04C000001           
+OK     USB       Dispositivo compuesto USB         USB\VID_13D3&PID_56F7\6&2735B176&0&3         
+OK     USB       Dispositivo compuesto USB         USB\VID_145F&PID_030E\B120300001             
+OK     HIDClass  Dispositivo de entrada USB        USB\VID_145F&PID_030E&MI_01\7&10F35153&0&0001
+OK     Net       Realtek USB GbE Family Controller USB\VID_0BDA&PID_8153\3213F46B8CE365AB       
+
+
+

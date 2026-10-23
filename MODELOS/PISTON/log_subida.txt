@@ -1,0 +1,14 @@
+Puertos: COM6
+CLI: C:\Program Files\Arduino IDE\resources\app\lib\backend\resources\arduino-cli.exe
+CMD: "C:\Program Files\Arduino IDE\resources\app\lib\backend\resources\arduino-cli.exe" compile --jobs 1 --upload -p COM6 --fqbn arduino:avr:uno "C:\Users\Lenovo Yoga\Desktop\SII 2026\LAB-DE-CONTROL-GR5\MODELOS\PISTON\pil_arduino"
+STATUS: 1
+Mingw-w64 runtime failure:
+  VirtualProtect failed with code 0x5afavr-g++: internal compiler error: Aborted (program cc1plus)
+Please submit a full bug report,
+with preprocessed source if appropriate.
+See <https://gcc.gnu.org/bugs/> for instructions.
+
+[92mUsed platform[0m [92mVersion[0m [90mPath[0m
+[93marduino:avr[0m   1.8.8   [90mC:\Users\Lenovo Yoga\AppData\Local\Arduino15\packages\arduino\hardware\avr\1.8.8[0m
+Error during build: exit status 4
+
