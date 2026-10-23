@@ -21,7 +21,7 @@ kfalla = 700;                                          % t = 7.00 s, ya asentado
 cada = 5;                                              % redibuja cada 5 muestras (20 fps)
 
 D = nan(N, 6);                                         % [t ref x xm u rtt_ms]
-nerr = 0; nseq = 0; t0w = []; tfalla = NaN;
+nerr = 0; nseq = 0; t0w = []; tfalla = NaN; ncuad = 0;
 
 % ---------------- tablero ----------------
 azul = [0 0.45 0.74]; rojo = [0.85 0.2 0.1]; gris = [0.5 0.5 0.5]; verde = [0.2 0.6 0.25];
@@ -103,7 +103,8 @@ if op.esperar
     uiwait(fig); delete(b);
 end
 if op.video
-    vw = VideoWriter(fullfile(outd, 'demo_pil.mp4'), 'MPEG-4'); vw.FrameRate = 1/(cada*Ts); vw.Quality = 95;
+    % 1920x1080 a resolucion nativa de pantalla, H.264 liviano: el tablero es casi plano
+    vw = VideoWriter(fullfile(outd, 'demo_pil.mp4'), 'MPEG-4'); vw.FrameRate = 1/(cada*Ts); vw.Quality = 60;
     open(vw);
 end
 
@@ -118,7 +119,8 @@ tFin.String = sprintf(['Demo terminada: %d tramas\n%d error detectado (el inyect
     'RTT medio %.1f ms, máx. %.1f ms'], nseq, nerr, mean(rtt, 'omitnan'), max(rtt));
 drawnow;
 if op.video
-    for i = 1:round(2/(cada*Ts)), writeVideo(vw, getframe(fig)); end   % 2 s de cuadro final
+    img = cuadro();
+    for i = 1:round(2/(cada*Ts)), writeVideo(vw, img); end            % 2 s de cuadro final
     close(vw);
 end
 exportgraphics(fig, fullfile(outd, 'demo_final.png'), 'Resolution', 150);
@@ -168,6 +170,14 @@ fprintf('demo_pil OK: %d tramas, %d errores, RTT medio %.2f ms\n', nseq, nerr, m
         tLat.String = sprintf('RTT %.1f ms (prom %.1f)', rtt*1e3, mean(lat, 'omitnan'));
         hLed.MarkerFaceColor = [0.3 0.3 0.3] + (abs(u) >= 1)*([1 0.15 0.1] - [0.3 0.3 0.3]);
 
-        if op.video, drawnow; writeVideo(vw, getframe(fig)); else, drawnow limitrate; end
+        if op.video, drawnow; writeVideo(vw, cuadro()); else, drawnow limitrate; end
+    end
+
+    function img = cuadro()
+        img = print(fig, '-RGBImage', '-r0');
+        if ~ncuad, fprintf('cuadro nativo: %dx%d\n', size(img, 2), size(img, 1)); end
+        ncuad = ncuad + 1;
+        img = img(1:min(end, 1080), 1:min(end, 1920), :);  % recorta o rellena a 1080p exacto
+        img(end+1:1080, :, :) = 255; img(:, end+1:1920, :) = 255;
     end
 end
