@@ -1,6 +1,7 @@
 % Compila y sube pil_arduino.ino al Arduino UNO con el arduino-cli del IDE.
 here = fileparts(mfilename('fullpath'));
-fid = fopen(fullfile(here, 'log_subida.txt'), 'w');
+if ~isfolder(fullfile(here, 'logs')), mkdir(fullfile(here, 'logs')); end
+fid = fopen(fullfile(here, 'logs', 'log_subida.txt'), 'w');
 ports = serialportlist("available");
 fprintf(fid, 'Puertos: %s\n', strjoin(ports, ', '));
 cands = {fullfile(getenv('ProgramFiles'), 'Arduino IDE', 'resources', 'app', 'lib', 'backend', 'resources', 'arduino-cli.exe'), ...
@@ -21,4 +22,4 @@ fprintf(fid, 'STATUS: %d\n%s\n', st, out);
 fclose(fid);
 assignin('base', 'PIL_PORT', port);
 fprintf('Subida terminada (status %d) en %s\n', st, port);
-if st ~= 0, error('Fallo la compilacion/subida: ver log_subida.txt'); end
+if st ~= 0, error('Fallo la compilacion/subida: ver logs/log_subida.txt'); end

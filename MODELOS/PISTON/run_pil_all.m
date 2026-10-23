@@ -8,7 +8,7 @@ mdl = 'PiL'; load_system(mdl);
 p = serialportlist("available");
 HW = ~isempty(p);
 if HW, PIL_PORT = p(end); outd = 'resultados'; figd = 'figuras';
-else,  outd = 'resultados_sin_hw'; figd = fullfile('resultados_sin_hw', 'figuras'); end  % sin Arduino: todo en MATLAB
+else,  outd = fullfile('resultados', 'sin_hw'); figd = fullfile(outd, 'figuras'); end  % sin Arduino: todo en MATLAB
 if ~isfolder(outd), mkdir(outd); end
 if ~isfolder(figd), mkdir(figd); end
 logf = fopen(fullfile(outd, 'log_corridas.txt'), 'w');

@@ -3,7 +3,7 @@ function demo_pil(varargin)
 % Perfil de tres escalones, no idealidades del sensor activas, una trama corrupta
 % inyectada a proposito y un tablero animado a tiempo real.
 %   demo_pil                                  -> espera el boton "Iniciar"
-%   demo_pil('esperar', false, 'video', true) -> arranca solo y graba resultados_demo/demo_pil.mp4
+%   demo_pil('esperar', false, 'video', true) -> arranca solo y graba resultados/demo/demo_pil.mp4
 global PIL
 op = struct('esperar', true, 'video', false, 'puerto', "COM6");
 for i = 1:2:numel(varargin), op.(varargin{i}) = varargin{i+1}; end
@@ -11,7 +11,7 @@ for i = 1:2:numel(varargin), op.(varargin{i}) = varargin{i+1}; end
 here = fileparts(mfilename('fullpath')); cd(here);
 evalin('base', sprintf('run(''%s'')', fullfile(here, '..', 'CINEMATICA', 'MARLUP_hydr_params.m')));
 mdl = 'PiL'; load_system(mdl);
-outd = fullfile(here, 'resultados_demo'); if ~isfolder(outd), mkdir(outd); end
+outd = fullfile(here, 'resultados', 'demo'); if ~isfolder(outd), mkdir(outd); end
 
 % ---------------- escenario ----------------
 Ts = 0.01; Tf = 9; N = round(Tf/Ts) + 1;
@@ -21,7 +21,7 @@ kfalla = 700;                                          % t = 7.00 s, ya asentado
 cada = 5;                                              % redibuja cada 5 muestras (20 fps)
 
 D = nan(N, 6);                                         % [t ref x xm u rtt_ms]
-nerr = 0; nseq = 0; t0w = []; tfalla = NaN; ncuad = 0;
+nerr = 0; nseq = 0; t0w = []; ncuad = 0;
 
 % ---------------- tablero ----------------
 azul = [0 0.45 0.74]; rojo = [0.85 0.2 0.1]; gris = [0.5 0.5 0.5]; verde = [0.2 0.6 0.25];
@@ -129,22 +129,22 @@ PIL.sp = []; clear sp
 fprintf('demo_pil OK: %d tramas, %d errores, RTT medio %.2f ms\n', nseq, nerr, mean(rtt, 'omitnan'));
 
     function actualizar(k, ref, x, xm, u, est, rtt, tx, rx)
-        i = k + 1; t = k*Ts;
-        D(i, :) = [t ref x xm u rtt*1e3];
+        n = k + 1; t = k*Ts;
+        D(n, :) = [t ref x xm u rtt*1e3];
         nseq = nseq + 1;
         if est ~= 0
-            nerr = nerr + 1; tfalla = t;
+            nerr = nerr + 1;
             xline(ax1, t, ':', 'Color', rojo, 'LineWidth', 1.5);
             xline(ax2, t, ':', 'Color', rojo, 'LineWidth', 1.5);
             tEv.String = sprintf(['t = %.2f s: trama con checksum\ncorrupto inyectada a propósito\n' ...
                 '→ MCU respondió estado = %d\n   y repitió el último u'], t, est);
         end
         if isempty(t0w), t0w = tic; end
-        if mod(k, cada) ~= 0 && i ~= N, return; end
+        if mod(k, cada) ~= 0 && n ~= N, return; end
         espera = t - toc(t0w);                         % ritmo de tiempo real
         if espera > 0, pause(espera); end
 
-        j = 1:i;
+        j = 1:n;
         set(hx, 'XData', D(j,1), 'YData', D(j,3)*1e3);
         set(hr, 'XData', D(j,1), 'YData', D(j,2)*1e3);
         set(hu, 'XData', D(j,1), 'YData', D(j,5));
