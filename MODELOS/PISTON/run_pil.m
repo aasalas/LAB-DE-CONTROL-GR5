@@ -57,12 +57,3 @@ fprintf(logf, 'OK\n'); fclose(logf);
 save(fullfile(outd, 'resultados_pil.mat'), 'R', 'M');
 set_param([m '/Controlador'], 'SimulationMode', pil); save_system(m);   % queda abierto en modo PIL
 disp('run_pil OK');
-
-function limpiar_pil
-% Si el codigo de ctrl_pi se da por "al dia" (carpeta slprj o cache ctrl_pi.slxc), la aplicacion
-% PIL se arma sin wrapper.mk y el make falla; borrarlos fuerza una compilacion limpia.
-clear mex
-d = fullfile('slprj', 'ert', 'ctrl_pi');
-if isfolder(d), rmdir(d, 's'); end
-if isfile('ctrl_pi.slxc'), delete('ctrl_pi.slxc'); end
-end

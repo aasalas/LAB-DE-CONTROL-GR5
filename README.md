@@ -70,6 +70,22 @@ CH340) conectado por USB.
    sin no idealidades, `sens = struct('bias',0,'backlash',0,'q',1e-12,'xmin',-inf,'xmax',inf)`.
    Abra `PiL.slx` y presione *Run*: el bloque Controlador ya está en modo PIL.
 
+### Demostración en vivo
+
+Para correr un solo caso con el Arduino y verlo sobre el MiL guardado (gráfica y métricas):
+
+```matlab
+cd MODELOS/PISTON
+demo_pil              % PiL no ideal: sesgo + histéresis + ADC
+demo_pil('ideal')     % otros casos: 'ideal', 'cuant', 'lin', 'hist', 'todas'
+demo_pil('mil')       % controlador en el PC (modo Normal), sin Arduino
+demo_pil('todas', 'COM4')   % fijando el puerto
+```
+
+Carga los parámetros, fija el puerto, abre `PiL.slx` y corre la simulación (1–1.5 min la
+primera vez, porque compila y carga el código al Arduino). Si la caché de compilación da
+problemas, recompila solo.
+
 **Problemas conocidos (ya resueltos en los scripts):**
 
 | Mensaje | Causa y solución |
@@ -96,8 +112,9 @@ MODELOS/
     ├── PiL.slx            Planta + sensor + bloque Model en modo PIL
     ├── ctrl_pi.slx        Controlador PI que Embedded Coder compila para el Arduino
     ├── run_pil.m          Corre los 6 casos, calcula métricas y genera figuras
+    ├── demo_pil.m         Corre un caso (por defecto, el no ideal) para la demostración
     ├── pil_puerto.m       Fija el puerto serial del Arduino en ctrl_pi.slx
-    ├── metricas_pil.m, figuras_pil.m
+    ├── metricas_pil.m, figuras_pil.m, limpiar_pil.m
     ├── MiL.slx, parameters.m   Modelo del actuador del Avance 2
     ├── resultados/        Métricas, log y CSV por caso
     └── figuras/           Figuras del informe
