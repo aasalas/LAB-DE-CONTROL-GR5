@@ -55,24 +55,12 @@ CH340) conectado por USB.
 2. **Conectar solo el Arduino.** Para ver su puerto: `serialportlist("available")` en
    MATLAB, o el Administrador de dispositivos de Windows ("Puertos (COM y LPT)").
    Ejecute un solo MATLAB a la vez.
-3. **Correr los 6 casos** desde la raíz del repositorio (unos 3 minutos: el primer caso
-   PIL compila el controlador y lo carga al Arduino; los siguientes reutilizan el programa):
-   ```bash
-   matlab -batch "cd('MODELOS/PISTON'); run_pil"
-   ```
-   Usa el último puerto serial disponible. Para fijarlo a mano:
-   ```bash
-   matlab -batch "cd('MODELOS/PISTON'); PIL_PORT = 'COM4'; run_pil"
-   ```
-   Escribe `resultados/` (métricas, log y CSV) y `figuras/`.
-4. **Desde la interfaz de Simulink** (opcional): en MATLAB, `cd MODELOS/PISTON`,
-   `run('../CINEMATICA/MARLUP_hydr_params.m')`, `pil_puerto('COM4')` con su puerto y,
-   sin no idealidades, `sens = struct('bias',0,'backlash',0,'q',1e-12,'xmin',-inf,'xmax',inf)`.
-   Abra `PiL.slx` y presione *Run*: el bloque Controlador ya está en modo PIL.
+### Cómo correr el Processor-in-the-Loop
 
-### Demostración en vivo
+En las tres formas, Embedded Coder compila el controlador y lo carga al Arduino; la
+planta y el sensor corren en Simulink.
 
-Para correr un solo caso con el Arduino y verlo sobre el MiL guardado (gráfica y métricas):
+**A. Un caso, para la demostración en vivo** (dentro de MATLAB):
 
 ```matlab
 cd MODELOS/PISTON
@@ -82,9 +70,37 @@ demo_pil('mil')       % controlador en el PC (modo Normal), sin Arduino
 demo_pil('todas', 'COM4')   % fijando el puerto
 ```
 
-Carga los parámetros, fija el puerto, abre `PiL.slx` y corre la simulación (1–1.5 min la
-primera vez, porque compila y carga el código al Arduino). Si la caché de compilación da
-problemas, recompila solo.
+Carga los parámetros, fija el puerto, abre `PiL.slx`, corre la simulación y muestra la
+gráfica sobre el MiL guardado junto con las métricas. Tarda 1–1.5 min, porque compila y
+carga el código al Arduino; si la caché de compilación da problemas, recompila solo.
+
+**B. Los 6 casos del informe** (desde la raíz del repositorio, unos 3 minutos: el primer
+caso PIL compila el controlador y los siguientes reutilizan el programa):
+
+```bash
+matlab -batch "cd('MODELOS/PISTON'); run_pil"
+```
+
+Usa el último puerto serial disponible. Para fijarlo a mano:
+
+```bash
+matlab -batch "cd('MODELOS/PISTON'); PIL_PORT = 'COM4'; run_pil"
+```
+
+Escribe `resultados/` (métricas, log y CSV) y `figuras/`.
+
+**C. Desde la interfaz de Simulink**, presionando *Run*:
+
+```matlab
+cd MODELOS/PISTON
+run('../CINEMATICA/MARLUP_hydr_params.m')
+pil_puerto('COM4')    % con su puerto
+sens = struct('bias',0,'backlash',0,'q',1e-12,'xmin',-inf,'xmax',inf);   % sin no idealidades
+open_system('PiL')
+```
+
+Presione *Run*: el bloque Controlador ya está en modo PIL. Si en una segunda corrida
+aparece el error de `wrapper.mk`, ejecute `limpiar_pil` y vuelva a presionar *Run*.
 
 **Problemas conocidos (ya resueltos en los scripts):**
 
@@ -93,7 +109,7 @@ problemas, recompila solo.
 | *No Arduino Uno board detected* | El paquete no autodetecta clones CH340; `pil_puerto` fija el puerto a mano. |
 | *must be 'None' or the name of a registered hardware board* | Falta el Support Package en esta versión de MATLAB (paso 1). |
 | *Data type "double" is not supported for SIL or PIL* | En el AVR un double ocupa 4 bytes; la interfaz de `ctrl_pi` es `single`. |
-| *gmake: wrapper.mk: No such file or directory* | Código "al día" reutilizado desde la caché; `run_pil` borra `slprj/ert/ctrl_pi` y `ctrl_pi.slxc` y reintenta. Si aparece al correr desde la interfaz, borre esa carpeta y ese archivo y vuelva a correr. |
+| *gmake: wrapper.mk: No such file or directory* | Código "al día" reutilizado desde la caché; `run_pil` borra `slprj/ert/ctrl_pi` y `ctrl_pi.slxc` y reintenta. Si aparece al correr desde la interfaz, ejecute `limpiar_pil` y vuelva a correr. |
 
 ## Estructura del repositorio
 
