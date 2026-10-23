@@ -1,0 +1,13 @@
+HW=1
+MiL: 401 muestras, 18.3 s, errores trama 0
+PiL_ideal reset ack: [90 0 0 0 0 90]
+PiL_ideal: 401 muestras, 8.5 s, errores trama 0
+PiL_cuant reset ack: [90 0 0 0 0 90]
+PiL_cuant: 401 muestras, 6.4 s, errores trama 0
+PiL_lin reset ack: [90 0 0 0 0 90]
+PiL_lin: 401 muestras, 6.3 s, errores trama 0
+PiL_hist reset ack: [90 0 0 0 0 90]
+PiL_hist: 401 muestras, 6.6 s, errores trama 0
+PiL_todas reset ack: [90 0 0 0 0 90]
+PiL_todas: 401 muestras, 6.3 s, errores trama 0
+OK

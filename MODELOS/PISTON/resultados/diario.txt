@@ -1,0 +1,41 @@
+Unrecognized property 'UpdateMethod' for class 'Stateflow.EMChart'.
+
+Error in pil_setup (line 13)
+ch.UpdateMethod = 'Discrete';
+^^^^^^^^^^^^^^^
+Error in correr_todo (line 6)
+    pil_setup
+    ^^^^^^^^^
+pil_setup OK
+Error using subir_arduino (line 14)
+Sin puerto
+
+Error in correr_todo (line 7)
+    subir_arduino
+    ^^^^^^^^^^^^^
+pil_setup OK
+Subida terminada (status 1) en COM6
+[Warning: '<a href="matlab:Simulink.internal.open_and_hilite_port_hyperlink('hilite', ['PiL/PISTON MODEL'], 'Outport', 1);">Output Port 1</a>' of block '<a href="matlab:open_and_hilite_hyperlink ('PiL/PISTON MODEL','error')">PiL/PISTON MODEL</a>' is not connected.] 
+[> In <a href="matlab:matlab.lang.internal.introspective.errorDocCallback('run_pil_all', 'C:\Users\Lenovo Yoga\Desktop\SII 2026\LAB-DE-CONTROL-GR5\MODELOS\PISTON\run_pil_all.m', 37)" style="font-weight:bold">run_pil_all</a> (<a href="matlab: opentoline('C:\Users\Lenovo Yoga\Desktop\SII 2026\LAB-DE-CONTROL-GR5\MODELOS\PISTON\run_pil_all.m',37,0)">line 37</a>)
+In <a href="matlab:matlab.lang.internal.introspective.errorDocCallback('correr_todo', 'C:\Users\Lenovo Yoga\Desktop\SII 2026\LAB-DE-CONTROL-GR5\MODELOS\PISTON\correr_todo.m', 8)" style="font-weight:bold">correr_todo</a> (<a href="matlab: opentoline('C:\Users\Lenovo Yoga\Desktop\SII 2026\LAB-DE-CONTROL-GR5\MODELOS\PISTON\correr_todo.m',8,0)">line 8</a>)] 
+[Warning: '<a href="matlab:Simulink.internal.open_and_hilite_port_hyperlink('hilite', ['PiL/PISTON MODEL'], 'Outport', 2);">Output Port 2</a>' of block '<a href="matlab:open_and_hilite_hyperlink ('PiL/PISTON MODEL','error')">PiL/PISTON MODEL</a>' is not connected.] 
+[> In <a href="matlab:matlab.lang.internal.introspective.errorDocCallback('run_pil_all', 'C:\Users\Lenovo Yoga\Desktop\SII 2026\LAB-DE-CONTROL-GR5\MODELOS\PISTON\run_pil_all.m', 37)" style="font-weight:bold">run_pil_all</a> (<a href="matlab: opentoline('C:\Users\Lenovo Yoga\Desktop\SII 2026\LAB-DE-CONTROL-GR5\MODELOS\PISTON\run_pil_all.m',37,0)">line 37</a>)
+In <a href="matlab:matlab.lang.internal.introspective.errorDocCallback('correr_todo', 'C:\Users\Lenovo Yoga\Desktop\SII 2026\LAB-DE-CONTROL-GR5\MODELOS\PISTON\correr_todo.m', 8)" style="font-weight:bold">correr_todo</a> (<a href="matlab: opentoline('C:\Users\Lenovo Yoga\Desktop\SII 2026\LAB-DE-CONTROL-GR5\MODELOS\PISTON\correr_todo.m',8,0)">line 8</a>)] 
+[Warning: '<a href="matlab:Simulink.internal.open_and_hilite_port_hyperlink('hilite', ['PiL/PISTON MODEL'], 'Outport', 3);">Output Port 3</a>' of block '<a href="matlab:open_and_hilite_hyperlink ('PiL/PISTON MODEL','error')">PiL/PISTON MODEL</a>' is not connected.] 
+[> In <a href="matlab:matlab.lang.internal.introspective.errorDocCallback('run_pil_all', 'C:\Users\Lenovo Yoga\Desktop\SII 2026\LAB-DE-CONTROL-GR5\MODELOS\PISTON\run_pil_all.m', 37)" style="font-weight:bold">run_pil_all</a> (<a href="matlab: opentoline('C:\Users\Lenovo Yoga\Desktop\SII 2026\LAB-DE-CONTROL-GR5\MODELOS\PISTON\run_pil_all.m',37,0)">line 37</a>)
+In <a href="matlab:matlab.lang.internal.introspective.errorDocCallback('correr_todo', 'C:\Users\Lenovo Yoga\Desktop\SII 2026\LAB-DE-CONTROL-GR5\MODELOS\PISTON\correr_todo.m', 8)" style="font-weight:bold">correr_todo</a> (<a href="matlab: opentoline('C:\Users\Lenovo Yoga\Desktop\SII 2026\LAB-DE-CONTROL-GR5\MODELOS\PISTON\correr_todo.m',8,0)">line 8</a>)] 
+[Warning: '<a href="matlab:Simulink.internal.open_and_hilite_port_hyperlink('hilite', ['PiL/PISTON MODEL'], 'Outport', 5);">Output Port 5</a>' of block '<a href="matlab:open_and_hilite_hyperlink ('PiL/PISTON MODEL','error')">PiL/PISTON MODEL</a>' is not connected.] 
+[> In <a href="matlab:matlab.lang.internal.introspective.errorDocCallback('run_pil_all', 'C:\Users\Lenovo Yoga\Desktop\SII 2026\LAB-DE-CONTROL-GR5\MODELOS\PISTON\run_pil_all.m', 37)" style="font-weight:bold">run_pil_all</a> (<a href="matlab: opentoline('C:\Users\Lenovo Yoga\Desktop\SII 2026\LAB-DE-CONTROL-GR5\MODELOS\PISTON\run_pil_all.m',37,0)">line 37</a>)
+In <a href="matlab:matlab.lang.internal.introspective.errorDocCallback('correr_todo', 'C:\Users\Lenovo Yoga\Desktop\SII 2026\LAB-DE-CONTROL-GR5\MODELOS\PISTON\correr_todo.m', 8)" style="font-weight:bold">correr_todo</a> (<a href="matlab: opentoline('C:\Users\Lenovo Yoga\Desktop\SII 2026\LAB-DE-CONTROL-GR5\MODELOS\PISTON\correr_todo.m',8,0)">line 8</a>)] 
+[Warning: '<a href="matlab:Simulink.internal.open_and_hilite_port_hyperlink('hilite', ['PiL/PISTON MODEL'], 'Outport', 6);">Output Port 6</a>' of block '<a href="matlab:open_and_hilite_hyperlink ('PiL/PISTON MODEL','error')">PiL/PISTON MODEL</a>' is not connected.] 
+[> In <a href="matlab:matlab.lang.internal.introspective.errorDocCallback('run_pil_all', 'C:\Users\Lenovo Yoga\Desktop\SII 2026\LAB-DE-CONTROL-GR5\MODELOS\PISTON\run_pil_all.m', 37)" style="font-weight:bold">run_pil_all</a> (<a href="matlab: opentoline('C:\Users\Lenovo Yoga\Desktop\SII 2026\LAB-DE-CONTROL-GR5\MODELOS\PISTON\run_pil_all.m',37,0)">line 37</a>)
+In <a href="matlab:matlab.lang.internal.introspective.errorDocCallback('correr_todo', 'C:\Users\Lenovo Yoga\Desktop\SII 2026\LAB-DE-CONTROL-GR5\MODELOS\PISTON\correr_todo.m', 8)" style="font-weight:bold">correr_todo</a> (<a href="matlab: opentoline('C:\Users\Lenovo Yoga\Desktop\SII 2026\LAB-DE-CONTROL-GR5\MODELOS\PISTON\correr_todo.m',8,0)">line 8</a>)] 
+[Warning: '<a href="matlab:Simulink.internal.open_and_hilite_port_hyperlink('hilite', ['PiL/Scope'], 'Inport', 2);">Input Port 2</a>' of block '<a href="matlab:open_and_hilite_hyperlink ('PiL/Scope','error')">PiL/Scope</a>' is not connected.] 
+[> In <a href="matlab:matlab.lang.internal.introspective.errorDocCallback('run_pil_all', 'C:\Users\Lenovo Yoga\Desktop\SII 2026\LAB-DE-CONTROL-GR5\MODELOS\PISTON\run_pil_all.m', 37)" style="font-weight:bold">run_pil_all</a> (<a href="matlab: opentoline('C:\Users\Lenovo Yoga\Desktop\SII 2026\LAB-DE-CONTROL-GR5\MODELOS\PISTON\run_pil_all.m',37,0)">line 37</a>)
+In <a href="matlab:matlab.lang.internal.introspective.errorDocCallback('correr_todo', 'C:\Users\Lenovo Yoga\Desktop\SII 2026\LAB-DE-CONTROL-GR5\MODELOS\PISTON\correr_todo.m', 8)" style="font-weight:bold">correr_todo</a> (<a href="matlab: opentoline('C:\Users\Lenovo Yoga\Desktop\SII 2026\LAB-DE-CONTROL-GR5\MODELOS\PISTON\correr_todo.m',8,0)">line 8</a>)] 
+Error using run_pil_all (line 37)
+Program interruption has been detected.
+
+Error in correr_todo (line 8)
+    run_pil_all
+    ^^^^^^^^^^^

@@ -1,0 +1,8 @@
+HW=0
+MiL: 401 muestras, 5.8 s, errores trama 0
+PiL_ideal: 401 muestras, 3.3 s, errores trama 0
+PiL_cuant: 401 muestras, 3.2 s, errores trama 0
+PiL_lin: 401 muestras, 3.0 s, errores trama 0
+PiL_hist: 401 muestras, 3.2 s, errores trama 0
+PiL_todas: 401 muestras, 2.8 s, errores trama 0
+OK
