@@ -1,7 +1,0 @@
-MiL: modo Normal, 401 muestras, 12.1 s
-PiL_ideal: modo Processor-in-the-loop (PIL), 401 muestras, 67.2 s
-PiL_cuant: modo Processor-in-the-loop (PIL), 401 muestras, 40.6 s
-PiL_lin: modo Processor-in-the-loop (PIL), 401 muestras, 37.7 s
-PiL_hist: modo Processor-in-the-loop (PIL), 401 muestras, 35.6 s
-PiL_todas: modo Processor-in-the-loop (PIL), 401 muestras, 39.1 s
-OK

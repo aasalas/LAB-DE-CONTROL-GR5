@@ -1,13 +1,7 @@
-HW=1
-MiL: 401 muestras, 18.3 s, errores trama 0
-PiL_ideal reset ack: [90 0 0 0 0 90]
-PiL_ideal: 401 muestras, 8.5 s, errores trama 0
-PiL_cuant reset ack: [90 0 0 0 0 90]
-PiL_cuant: 401 muestras, 6.4 s, errores trama 0
-PiL_lin reset ack: [90 0 0 0 0 90]
-PiL_lin: 401 muestras, 6.3 s, errores trama 0
-PiL_hist reset ack: [90 0 0 0 0 90]
-PiL_hist: 401 muestras, 6.6 s, errores trama 0
-PiL_todas reset ack: [90 0 0 0 0 90]
-PiL_todas: 401 muestras, 6.3 s, errores trama 0
+MiL: modo Normal, 401 muestras, 16.5 s
+PiL_ideal: modo Processor-in-the-loop (PIL), 401 muestras, 83.1 s
+PiL_cuant: modo Processor-in-the-loop (PIL), 401 muestras, 23.7 s
+PiL_lin: modo Processor-in-the-loop (PIL), 401 muestras, 18.9 s
+PiL_hist: modo Processor-in-the-loop (PIL), 401 muestras, 19.3 s
+PiL_todas: modo Processor-in-the-loop (PIL), 401 muestras, 19.5 s
 OK

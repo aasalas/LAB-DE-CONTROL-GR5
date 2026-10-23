@@ -1,6 +1,6 @@
 function M = metricas_pil(R, nombres)
 % Metricas de la respuesta al escalon 0 -> 0.40 m en t = 0.5 s.
-% R.(nombre) = [t ref x xm u est] a Ts; el caso 'MiL' es la referencia del RMSE.
+% R.(nombre) = [t ref x xm u] a Ts; el caso 'MiL' es la referencia del RMSE.
 yf = 0.40; t0 = 0.5; nz = @(v) subsref([v(:); NaN], struct('type','()','subs',{{1}}));
 M = table();
 for c = 1:numel(nombres)
