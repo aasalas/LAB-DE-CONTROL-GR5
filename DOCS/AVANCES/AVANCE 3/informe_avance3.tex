@@ -279,11 +279,11 @@ Los valores usados en las corridas son $K_p=6.7$, $K_i=1$ y $U_{sat}=1$, y se ed
 \frac{\alpha(s)}{\alpha_b(s)}=\frac{1}{1+K\,G_i(s)}.
 \label{eq:sensibilidad}
 \end{equation}
-Con $K=20$, el lazo atenúa la inclinación de la base a $1/(1+K)\approx0.048$ (\SI{-26}{dB}) en toda la banda del oleaje. Como el lazo es solo proporcional, queda siempre un residuo proporcional a la inclinación de la base: con un \textit{pitch} máximo de \SI{1}{\degree}, el residuo ideal es de unos \SI{0.05}{\degree}.
+Con $K=20$ y un lazo interno ideal, este modelo simplificado predice una atenuación a $1/(1+K)\approx0.048$ (\SI{-26}{dB}) en toda la banda del oleaje. La simulación atenúa menos: la inclinación pasa de \SI{0.72}{\degree} a \SI{0.16}{\degree} de pico (unas 4.5 veces, \SI{-13}{dB}; Sec.~\ref{sec:resultados}), lo que equivale a una ganancia de lazo efectiva cercana a 3.5 y no a 20. \pendiente{Explicar la diferencia con el modelo simplificado (seguimiento real del lazo interno ante la dinámica del oleaje, acople con la plataforma, saturaciones) y confirmarla con una corrida en que se varíe $K$.} Como el lazo es solo proporcional, siempre queda un residuo proporcional a la inclinación de la base.
 
-\textit{Límite por resolución.} El residuo real lo fija la medición de posición. Un paso del ADC de 10 bits sobre \SI{450}{mm} equivale a \SI{0.44}{mm}, y por \eqref{eq:jacobiano} eso corresponde a $0.44/113\approx\SI{3.9}{mrad}\approx\SI{0.22}{\degree}$ de \textit{pitch} (\SI{0.19}{\degree} de \textit{roll}). Es decir, la resolución del sensor ya es del orden del requisito de nivelación de \SI{0.2}{\degree} y de las propias inclinaciones de la base. Esto explica que con ángulos pequeños las perturbaciones se atenúen pero no se cancelen: por debajo de unos \SI{0.2}{\degree} el controlador no distingue la inclinación de la mesa. \pendiente{verificar con los resultados del PiL ideal frente al no ideal.}
+\textit{Efecto de la resolución del sensor.} Un paso del ADC de 10 bits sobre \SI{450}{mm} es de \SI{0.44}{mm}; por \eqref{eq:jacobiano}, el error de \SI{0.22}{mm} de redondeo en la posición de un cilindro equivale a menos de \SI{0.12}{\degree} de inclinación en el peor caso. Sin embargo, el lazo exterior realimenta el ángulo de la mesa, que el modelo mide sin error, y por eso compensa los errores de medición de posición del lazo interno. La simulación lo confirma: las no idealidades del sensor cambian el pico de la inclinación en menos de \SI{0.005}{\degree} (Sec.~\ref{sec:noideal}). La resolución del ADC no es, por tanto, lo que limita la nivelación; la limita la ganancia efectiva del lazo.
 
-\textit{Mejoras posibles.} (i) Agregar prealimentación de la inclinación de la base medida con una IMU, como en la Fig.~\ref{fig:cascada}, o acción integral en el lazo exterior, para eliminar el residuo $1/(1+K)$; (ii) mejorar la resolución de la medición de posición (ADC de 12 bits o más) o medir directamente la inclinación de la mesa.
+\textit{Mejoras posibles.} (i) Aumentar $K$ o agregar acción integral en el lazo exterior, para reducir el residuo; (ii) agregar prealimentación de la inclinación de la base medida con una IMU, como en la Fig.~\ref{fig:cascada}; (iii) si el ángulo de la mesa se midiera en hardware con un sensor de resolución finita, repetir el análisis de resolución, que en este modelo no aparece porque la medición del ángulo es ideal.
 
 \subsection{Plataforma}
 \pendiente{Modelo de Simscape Multibody: cuerpos, masas e inercias de la mesa, uniones (juntas prismáticas con movimiento impuesto, unión de 4 GDL de la base), y cómo se obtiene $F_{L,i}$.}
@@ -346,18 +346,16 @@ Por cada periodo viajan 36 bytes de carga útil, es decir, al menos $36\cdot10/1
 \section{Implementación 1: sensores y actuadores ideales}
 \label{sec:ideal}
 % Criterio C5: PiL ideal frente al MiL con una métrica definida.
-\begin{figure}[H]
-\centering
-\figpendiente{4cm}{Inclinación de la mesa ($\alpha$, $\theta$) frente a la de la base: MiL y PiL ideal superpuestos.}
-\caption{MiL frente a PiL ideal. \pendiente{}}
-\label{fig:ideal}
-\end{figure}
-\pendiente{Métrica de coincidencia (RMSE y error máximo de la inclinación de la mesa entre MiL y PiL ideal).}
+Con sensores y actuadores ideales se simularon \SI{30}{s} de oleaje ($H_s=\SI{0.5}{m}$, $T_p=\SI{10}{s}$, $K=20$, $K_p=6.7$, $K_i=1$, $U_{sat}=1$) con el controlador en el PC (MiL) y en el Arduino UNO (PiL). La métrica de coincidencia es el RMSE y el error máximo de la inclinación de la mesa entre ambos, calculados sobre una malla común, ya que el solver de la planta es de paso variable.
+
+El PiL ideal reproduce al MiL con error nulo en \textit{pitch} y en \textit{roll}: RMSE de \SI{0.0000}{\degree} y error máximo de \SI{0.0000}{\degree}, frente a un pico de inclinación de \SI{0.159}{\degree} (Fig.~\ref{fig:resultados}). El código C generado por Embedded Coder y ejecutado en el ATmega328P calcula, por tanto, exactamente lo mismo que el modelo en el PC.
 
 % =====================================================================
 \section{Implementación 2: sensores y actuadores no ideales}
 \label{sec:noideal}
 % Criterio C6: al menos 3 no idealidades justificadas con hojas de datos.
+Se activaron tres no idealidades del sensor de posición de cada cilindro (Tabla~\ref{tab:noideal}), con los mismos valores que en la validación unitaria \cite{pil_unitario}.
+
 \begin{table}[H]
 \centering
 \caption{No idealidades del sensor de posición de cada cilindro}
@@ -373,34 +371,55 @@ Cuantización & ADC de 10 bits sobre \SI{450}{mm} & \SI{0.44}{mm} \\
 \bottomrule
 \end{tabularx}
 \end{table}
-\pendiente{Fuente de cada valor (hoja de datos del CDH1) y efecto esperado en la inclinación usando \eqref{eq:jacobiano}.}
+\pendiente{Fuente de cada valor en la hoja de datos del sensor del cilindro CDH1 \cite{rexroth}.}
+
+Con las tres activas, el PiL se aparta del MiL en \SI{0.0011}{\degree} RMS (\SI{0.0048}{\degree} como máximo) en \textit{pitch} y en \SI{0.0015}{\degree} RMS (\SI{0.0044}{\degree} como máximo) en \textit{roll}. El pico de inclinación pasa de \SI{0.159}{\degree} a \SI{0.159}{\degree} en \textit{pitch} y de \SI{0.083}{\degree} a \SI{0.084}{\degree} en \textit{roll}, de modo que el requisito de \SI{0.2}{\degree} se mantiene. La degradación es despreciable porque el lazo exterior realimenta el ángulo de la mesa, que no pasa por el ADC, y corrige los errores de medición de posición del lazo interno (Sec.~\ref{sec:ganancias}).
 
 % =====================================================================
 \section{Resultados y análisis comparativo}
 \label{sec:resultados}
 % Criterio R3: MiL vs PiL ideal vs PiL no ideal, con métricas y conclusiones.
+La Tabla~\ref{tab:resultados} y la Fig.~\ref{fig:resultados} comparan los cuatro casos durante \SI{30}{s}, sin contar los primeros \SI{2}{s} de arranque de los pistones.
+
 \begin{table}[H]
 \centering
-\caption{Desempeño de la nivelación \pendiente{}}
+\caption{Inclinación de la mesa ($H_s=\SI{0.5}{m}$, \SI{30}{s}). La atenuación es la del valor RMS de \textit{pitch} respecto del caso sin compensar}
 \label{tab:resultados}
-\small
-\begin{tabularx}{\columnwidth}{lCCCC}
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabularx}{\columnwidth}{lCCCCC}
 \toprule
-Caso & $|\theta|_{max}$ (\si{\degree}) & $\theta_{RMS}$ (\si{\degree}) & Atenuación (dB) & $u_{RMS}$ \\
+Caso & Pico \textit{pitch} (\si{\degree}) & RMS \textit{pitch} (\si{\degree}) & Pico \textit{roll} (\si{\degree}) & RMS \textit{roll} (\si{\degree}) & Aten. (dB) \\
 \midrule
-Base sin compensar & & & --- & --- \\
-MiL & & & & \\
-PiL ideal & & & & \\
-PiL no ideal & & & & \\
+Sin compensar ($K=0$) & 0.717 & 0.335 & 0.375 & 0.133 & --- \\
+MiL & 0.159 & 0.073 & 0.083 & 0.029 & $-13.2$ \\
+PiL ideal & 0.159 & 0.073 & 0.083 & 0.029 & $-13.2$ \\
+PiL no ideal & 0.159 & 0.073 & 0.084 & 0.030 & $-13.2$ \\
 \bottomrule
 \end{tabularx}
 \end{table}
-\pendiente{Gráficas y análisis: comparar la atenuación medida con la predicha por \eqref{eq:sensibilidad} y el residuo con el límite de resolución de la Sec.~\ref{sec:ganancias}.}
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.8\textwidth]{resultados_nivelacion.pdf}
+\caption{Inclinación de la mesa en \textit{pitch}. Arriba: sin compensar, MiL, PiL ideal y PiL no ideal (los tres últimos se superponen). Abajo: diferencia entre cada PiL y el MiL. Generada con \texttt{figuras/fig\_resultados.m}.}
+\label{fig:resultados}
+\end{figure*}
+
+El lazo de nivelación reduce la inclinación de la mesa unas 4.5 veces (\SI{-13}{dB}) en pico y en valor RMS, tanto en \textit{pitch} como en \textit{roll}, y deja el pico de \textit{pitch} por debajo del requisito de \SI{0.2}{\degree} (\SI{0.159}{\degree}, contra \SI{0.717}{\degree} sin compensar). El PiL ideal y el MiL son idénticos, y las no idealidades del sensor modifican el resultado en menos de \SI{0.005}{\degree}. La atenuación medida es menor que la predicha por el modelo simplificado, de \SI{-26}{dB} (Sec.~\ref{sec:ganancias}).
+
+\pendiente{Esfuerzo de control ($u_{RMS}$ de cada válvula) y, si se desea, el mismo análisis con otros valores de $K$ y de $H_s$.}
 
 % =====================================================================
 \section{Conclusiones}
 \label{sec:conclusiones}
-\pendiente{3--4 conclusiones con números, limitaciones y trabajo futuro.}
+\begin{itemize}
+\item El controlador de los tres pistones, generado por Embedded Coder desde \texttt{ctrl\_pi3.slx} y ejecutado en el ATmega328P, reproduce exactamente la simulación en el PC: RMSE de \SI{0.0000}{\degree} y error máximo nulo en \SI{30}{s} de oleaje, con la plataforma completa en Simulink y un solo bloque Model en modo PIL.
+\item Con $K=20$, el lazo de nivelación reduce el pico de inclinación de \textit{pitch} de \SI{0.717}{\degree} a \SI{0.159}{\degree} (\SI{-13}{dB}) y el de \textit{roll} de \SI{0.375}{\degree} a \SI{0.083}{\degree}, por debajo del requisito de \SI{0.2}{\degree}. La atenuación es menor que la del modelo simplificado (\SI{-26}{dB}), cuya causa queda por establecer.
+\item Las tres no idealidades del sensor (linealidad, histéresis y ADC de 10 bits) degradan el resultado en menos de \SI{0.005}{\degree}, porque el lazo exterior realimenta el ángulo de la mesa, medido sin error en el modelo.
+\end{itemize}
+
+Como limitaciones, el ángulo de la mesa se mide idealmente en la simulación, la ejecución en \textit{lockstep} no representa la latencia real de la UART ni la variabilidad del tiempo de cómputo, y las ganancias se sintonizaron experimentalmente. Como trabajo futuro se propone diseñar el controlador con ganancias justificadas analíticamente, modelar el sensor de inclinación con sus no idealidades y medir el tiempo de ejecución del controlador en el MCU frente al periodo de \SI{10}{ms}.
 
 % =====================================================================
 \begin{thebibliography}{9}
@@ -415,6 +434,6 @@ PiL no ideal & & & & \\
 % =====================================================================
 \appendix
 \section*{Anexo: reproducibilidad}
-Repositorio: \url{https://github.com/aasalas/LAB-DE-CONTROL-GR5}, commit \pendiente{hash}. Modelo de la plataforma: \texttt{MODELOS/CINEMATICA/Model\_aaronC.slx}, con parámetros en \texttt{MARLUP\_hydr\_params.m}. PiL de los tres pistones: \texttt{pil3\_iniciar.m}, \texttt{pil\_ctrl3.m}, \texttt{pil\_arduino\_3p/} y \texttt{prueba\_PIL.m}. Modelo matemático del actuador: \texttt{MODELOS/PISTON/MODELO\_MATEMATICO.md}. Validación unitaria de un actuador: \texttt{MODELOS/PISTON} y \texttt{DOCS/INFORME\_PIL}.
+Repositorio: \url{https://github.com/aasalas/LAB-DE-CONTROL-GR5}, commit \pendiente{hash}. Modelo de la plataforma: \texttt{MODELOS/CINEMATICA/Model\_aaronC.slx}, con parámetros en \texttt{MARLUP\_hydr\_params.m}. PiL de los tres pistones: controlador \texttt{ctrl\_pi3.slx}, configuración \texttt{config\_pil3.m} y corridas con \texttt{correr\_pil3.m}; los pasos para reproducirlo, y una bitácora, están en el \texttt{README.md}. Datos y figuras de los resultados: \texttt{DOCS/AVANCES/AVANCE 3/resultados/} y \texttt{figuras/fig\_resultados.m}. Modelo matemático del actuador: \texttt{MODELOS/PISTON/MODELO\_MATEMATICO.md}. Validación unitaria de un actuador: \texttt{MODELOS/PISTON} y \texttt{DOCS/INFORME\_PIL}.
 
 \end{document}
