@@ -189,6 +189,11 @@ salen de `DOCS/AVANCES/AVANCE 3/figuras/fig_resultados.m`.
 
 Registro de lo hecho en el PiL de la plataforma completa. Más reciente primero.
 
+### 13 nov 2026: plan del experimento 1 (factorial y barrido de K)
+
+El plan, la duración estimada y luego los resultados están en
+[`MODELOS/CINEMATICA/BITACORA.md`](MODELOS/CINEMATICA/BITACORA.md).
+
 ### 13 nov 2026: PiL con bloque Model sobre el Arduino
 
 - Se reemplazó el MATLAB Function que hablaba por serie con tramas propias (`pil_ctrl3`,
@@ -259,6 +264,7 @@ MODELOS/
 │   ├── Model_aaronC.slx       Plataforma completa con el controlador en el Arduino (PiL)
 │   ├── Model_aaron.slx        La misma plataforma con el controlador en el PC (MiL)
 │   ├── ctrl_pi3.slx           Los tres PI que Embedded Coder compila para el Arduino
+│   ├── BITACORA.md            Plan y resultados de los experimentos (barrido de K, ...)
 │   ├── config_pil3.m          Ganancias, no idealidades y visualización: se edita aquí
 │   ├── correr_pil3.m          Corre el MiL o el PiL y mide la inclinación de la mesa
 │   └── iniciar_pil3.m, pil3_puerto.m, pil3_limpiar.m   Apoyo (los llama el modelo)
