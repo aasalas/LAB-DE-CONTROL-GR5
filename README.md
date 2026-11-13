@@ -189,7 +189,7 @@ salen de `DOCS/AVANCES/AVANCE 3/figuras/fig_resultados.m`.
 
 Registro de lo hecho en el PiL de la plataforma completa. Más reciente primero.
 
-### 13 nov 2026: plan del experimento 1 (barrido de K)
+### 13 nov 2026: plan del experimento 1 (factorial y barrido de K)
 
 El plan, la duración estimada y luego los resultados están en
 [`MODELOS/CINEMATICA/BITACORA.md`](MODELOS/CINEMATICA/BITACORA.md).
