@@ -14,6 +14,8 @@ if en_q, sens.q = q_; sens.xmin = 0; sens.xmax = 1023*q_; end
 % Mechanics Explorer: se abre o no según ver_mechanics (como InitFcn actúa sobre el modelo que simula)
 if exist('bdroot', 'file') && ~isempty(bdroot) && bdIsLoaded(bdroot) && ...
         any(strcmp(bdroot, {'Model_aaron', 'Model_aaronC'}))
-    set_param(bdroot, 'SimMechanicsOpenEditorOnUpdate', char(["off", "on"](ver_mechanics + 1)));
+    if ver_mechanics, estado_ = 'on'; else, estado_ = 'off'; end
+    set_param(bdroot, 'SimMechanicsOpenEditorOnUpdate', estado_);
+    clear estado_
 end
 clear here_ q_
