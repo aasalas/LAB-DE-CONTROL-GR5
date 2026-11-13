@@ -13,7 +13,7 @@
 \usepackage{hyperref}
 
 \sisetup{output-decimal-marker={.}}
-\graphicspath{{figuras/}}
+\graphicspath{{figuras/}{../../../MODELOS/PISTON/figuras/}}
 
 % Columnas para tabularx: X = ajusta al ancho disponible y parte líneas
 \newcolumntype{L}{>{\raggedright\arraybackslash}X}
@@ -46,7 +46,7 @@ Laboratorio de Control Automático, Prof. Adolfo Chaves Jiménez}
 % 150--200 palabras al final: qué se hizo, resultado principal con números,
 % causa principal de la degradación.
 \begin{abstract}
-\pendiente{Resumen de 150--200 palabras al cerrar los resultados del PiL de los tres pistones.}
+Se extendió la validación \textit{Processor-in-the-Loop} (PiL) de MARLUP, una plataforma de nivelación con tres cilindros hidráulicos, de un actuador a la planta completa. La plataforma, el oleaje de Pierson--Moskowitz ($H_s=\SI{2}{m}$, $T_p=\SI{10}{s}$) y los actuadores se simulan en Simulink, y los tres controladores PI de posición se ejecutan en un Arduino UNO con código generado por Embedded Coder. La función de transferencia del actuador se identificó sobre el modelo no lineal, y con ella se diseñó un único PI ($K_p=20$, $K_i=1$) que cumple las especificaciones de respuesta al escalón ($M_p=\SI{2.4}{\percent}$, $t_s=\SI{0.28}{s}$) con márgenes de \SI{16.9}{dB} y \SI{73.7}{\degree}. Con una ganancia de nivelación $K=15$, la inclinación pico de la mesa baja de \SI{2.88}{\degree} a \SI{0.78}{\degree} en \textit{pitch} y de \SI{1.52}{\degree} a \SI{0.42}{\degree} en \textit{roll}, por debajo del requisito de \SI{1}{\degree}. El PiL reproduce al \textit{Model-in-the-Loop} (MiL) con error nulo. Con cuatro no idealidades del sensor de posición (linealidad, histéresis, ADC de 10 bits y ruido), el comando de las válvulas adquiere un ruido de \num{0.012} RMS, pero la inclinación de la mesa cambia en menos de \SI{0.04}{\degree}: el lazo de posición filtra el ruido y el lazo de nivelación corrige los errores de posición.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -58,7 +58,9 @@ Processor-in-the-Loop, control hidráulico, plataforma de nivelación, oleaje, M
 % Del PiL unitario (un pistón) al PiL de la planta completa.
 MARLUP es una plataforma que nivela su mesa (\textit{roll} y \textit{pitch}) frente al movimiento de una base excitada por el oleaje, mediante tres cilindros hidráulicos \cite{wang2025}. En una primera etapa se validó el controlador de posición de un solo actuador mediante un esquema \textit{Processor-in-the-Loop} (PiL), con resultados documentados en el informe de validación unitaria \cite{pil_unitario}. En la presentación se solicitó extender el PiL a la planta completa: los tres controladores de posición se ejecutan en un mismo microcontrolador mientras la plataforma, el oleaje y los actuadores se simulan en Simulink. Este informe documenta esa integración.
 
-\pendiente{Objetivo específico y organización del documento.} El requisito de desempeño es mantener la inclinación de la mesa por debajo de \SI{1}{\degree} en \textit{roll} y en \textit{pitch} con un oleaje de $H_s=\SI{2}{m}$.
+El objetivo es verificar que el controlador de los tres actuadores, ejecutado en el microcontrolador, mantiene la mesa nivelada frente a un oleaje que inclina la base varios grados. El requisito de desempeño es mantener la inclinación de la mesa por debajo de \SI{1}{\degree} en \textit{roll} y en \textit{pitch} con un oleaje de $H_s=\SI{2}{m}$.
+
+La Sec.~\ref{sec:correcciones} responde a las observaciones de la presentación. La Sec.~\ref{sec:modelo} presenta el modelo de la planta, la función de transferencia del actuador y el diseño del controlador. Las Secs.~\ref{sec:interfaz}, \ref{sec:control} y \ref{sec:pil} describen la interfaz con el microcontrolador, la implementación del controlador y la arquitectura PiL. Las Secs.~\ref{sec:ideal} y \ref{sec:noideal} presentan las implementaciones con sensores ideales y no ideales, y la Sec.~\ref{sec:resultados} las compara.
 
 % =====================================================================
 \section{Correcciones de la presentación}
@@ -73,7 +75,7 @@ MARLUP es una plataforma que nivela su mesa (\textit{roll} y \textit{pitch}) fre
 \toprule
 Observación & Acción & Evidencia \\
 \midrule
-El PiL incluía un solo pistón & Se integraron los tres controladores en un solo MCU con un protocolo de trama única & Secs.~\ref{sec:pil} y \ref{sec:ideal} \\
+El PiL incluía un solo pistón & Se integraron los tres controladores en un solo MCU, con un único bloque Model en modo PIL y código generado por Embedded Coder & Secs.~\ref{sec:pil} y \ref{sec:ideal} \\
 \pendiente{observación} & \pendiente{acción} & \pendiente{sección} \\
 \bottomrule
 \end{tabularx}
@@ -424,7 +426,7 @@ Ruido eléctrico & Gaussiano, independiente por cilindro, a $T_s$ & $\sigma=\SI{
 \bottomrule
 \end{tabularx}
 \end{table}
-\pendiente{Fuente de los tres primeros valores en la hoja de datos del sensor del cilindro CDH1 \cite{rexroth}.}
+El error de linealidad y la histéresis se toman de la hoja de datos del cilindro y de su sensor de posición \cite{rexroth}, y la cuantización, de la resolución del ADC del ATmega328P \cite{atmega328p}, igual que en la validación unitaria \cite{pil_unitario}.
 
 Las no idealidades se ven donde actúan: en el lazo de posición. El comando de cada válvula pasa a tener una componente de ruido de \num{0.012} RMS (\num{0.05} como máximo), del orden de $K_p\sigma=0.009$ más la cuantización, y el esfuerzo de control sube un \SI{6}{\percent} en la válvula más exigida (Fig.~\ref{fig:comando}). En la inclinación de la mesa el efecto es pequeño: el PiL no ideal se aparta del PiL ideal en \SI{0.0075}{\degree} RMS (\SI{0.033}{\degree} como máximo) en \textit{pitch} y en \SI{0.0095}{\degree} RMS (\SI{0.034}{\degree} como máximo) en \textit{roll}, y el pico de \textit{pitch} pasa de \SI{0.784}{\degree} a \SI{0.783}{\degree}. Dos efectos lo explican: el lazo interno, que cruza en \SI{12.6}{rad/s}, filtra el ruido que llega a \SI{50}{Hz}; y el lazo exterior realimenta el ángulo de la mesa, que el modelo mide sin error, y corrige lo que queda de los errores de posición. El sesgo, al ser igual en los tres cilindros, solo desplaza la mesa en altura y no la inclina.
 
@@ -497,6 +499,6 @@ Como limitaciones, el ángulo de la mesa se mide idealmente en la simulación, l
 % =====================================================================
 \appendix
 \section*{Anexo: reproducibilidad}
-Repositorio: \url{https://github.com/aasalas/LAB-DE-CONTROL-GR5}, commit \pendiente{hash}. Modelo de la plataforma: \texttt{MODELOS/CINEMATICA/Model\_aaronC.slx}, con parámetros en \texttt{MARLUP\_hydr\_params.m}. PiL de los tres pistones: controlador \texttt{ctrl\_pi3.slx}, configuración \texttt{config\_pil3.m} y corridas con \texttt{correr\_pil3.m}; los pasos para reproducirlo, y una bitácora, están en el \texttt{README.md}. Escenario final (MiL y PiL, $H_s=\SI{2}{m}$, $K=15$): \texttt{MODELOS/CINEMATICA/exp2\_final.m}; datos en \texttt{DOCS/AVANCES/AVANCE 3/resultados/exp2\_final.mat} y figuras con \texttt{figuras/fig\_final.m}. Diseño del PI: \texttt{MODELOS/PISTON/diseno\_pi.m}. Plan y resultados de los experimentos: \texttt{MODELOS/CINEMATICA/BITACORA.md}. Modelo matemático del actuador: \texttt{MODELOS/PISTON/MODELO\_MATEMATICO.md}. Validación unitaria de un actuador: \texttt{MODELOS/PISTON} y \texttt{DOCS/INFORME\_PIL}.
+Repositorio: \url{https://github.com/aasalas/LAB-DE-CONTROL-GR5}, rama \texttt{develop}. Modelo de la plataforma: \texttt{MODELOS/CINEMATICA/Model\_aaronC.slx}, con parámetros en \texttt{MARLUP\_hydr\_params.m}. PiL de los tres pistones: controlador \texttt{ctrl\_pi3.slx}, configuración \texttt{config\_pil3.m} y corridas con \texttt{correr\_pil3.m}; los pasos para reproducirlo, y una bitácora, están en el \texttt{README.md}. Escenario final (MiL y PiL, $H_s=\SI{2}{m}$, $K=15$): \texttt{MODELOS/CINEMATICA/exp2\_final.m}; datos en \texttt{DOCS/AVANCES/AVANCE 3/resultados/exp2\_final.mat} y figuras con \texttt{figuras/fig\_final.m}. Diseño del PI: \texttt{MODELOS/PISTON/diseno\_pi.m}. Plan y resultados de los experimentos: \texttt{MODELOS/CINEMATICA/BITACORA.md}. Modelo matemático del actuador: \texttt{MODELOS/PISTON/MODELO\_MATEMATICO.md}. Validación unitaria de un actuador: \texttt{MODELOS/PISTON} y \texttt{DOCS/INFORME\_PIL}.
 
 \end{document}
