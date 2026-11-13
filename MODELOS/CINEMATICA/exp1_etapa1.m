@@ -6,4 +6,4 @@ K    = [0; 5; 40; 5; 40; 14; 5; 40; 5; 40];
 Kp   = [6.7; 3; 3; 3; 3; 8; 20; 20; 20; 20];
 Usat = [1; 0.1; 0.1; 1; 1; 0.3; 0.1; 0.1; 1; 1];
 corridas = table(id, repmat("mil",10,1), K, Kp, ones(10,1), Usat, 'VariableNames', {'id','modo','K','Kp','Ki','Usat'});
-T = exp_corridas(corridas, 'exp1_etapa1_mil'); disp(T(:, {'id','K','Kp','Usat','estable','t_sim_s','pico_pitch','rms_pitch','urms_max','sat_pct_max','atten_pitch_dB'}))
+T = exp_corridas(corridas, 'exp1_etapa1_mil', 'Hs', 0.5); disp(T(:, {'id','K','Kp','Usat','estable','t_sim_s','pico_pitch','rms_pitch','urms_max','sat_pct_max','atten_pitch_dB'}))

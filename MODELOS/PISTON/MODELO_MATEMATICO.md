@@ -1,6 +1,6 @@
 # Modelo matemático del actuador electrohidráulico (un pistón)
 
-Documenta el modelo de `MiL.slx` / `PiL.slx` (cilindro Rexroth CDH1 40/28 + válvula proporcional 4/3) y justifica las ganancias del PI de `ctrl_pi.slx` (Kp = 60, Ki = 1, Ts = 10 ms).
+Documenta el modelo de `MiL.slx` / `PiL.slx` (cilindro Rexroth CDH1 40/28 + válvula proporcional 4/3) y justifica las ganancias del PI de `ctrl_pi.slx`, que es el **controlador único del proyecto**: Kp = 20, Ki = 1, Ts = 10 ms (el mismo en los tres pistones de `ctrl_pi3.slx`).
 
 El diagrama de Simulink **no es lineal**: tiene saturación de la válvula, caudal ∝ √Δp, volúmenes que dependen de la posición V(x) y fricción F_f(ẋ). Solo hay función de transferencia tras linealizar. El modelo no lineal es el que se simula; el lineal sirve para analizar y sintonizar.
 
@@ -63,74 +63,50 @@ $$\omega_h=\sqrt{\frac{2A^2\beta_e}{m_LV_0}},\qquad \zeta_h=\frac{\omega_h\,(m_L
 
 Para $K_c\approx0$ (válvula de centro crítico ideal), el amortiguamiento lo da casi solo la fricción: $\zeta_h\approx b/(2m_L\omega_h)$.
 
-## 4. Valores numéricos
+## 4. Función de transferencia identificada
 
-Con los parámetros de la sección 1 y $K_c\approx0$:
+Los valores analíticos de la sección 3 dependen de $K_q$, $K_c$ y los volúmenes, que no se midieron. Por eso $G(s)$ se identificó con un **ensayo en lazo abierto sobre el modelo no lineal de Simulink** (`diseno_pi.m`): escalones de $u=\pm0.02,\pm0.05,\pm0.1$ en $x_0=0.23$ m y medición de la velocidad del vástago. La velocidad se establece en ~25 ms **sin oscilar**: en el modelo simulado no aparece la resonancia hidráulica que predice la sección 3. Queda
+
+$$G(s)\approx\frac{K_v\,e^{-\theta s}}{s(\tau s+1)}=\frac{0.636\,e^{-0.0088s}}{s(0.0085s+1)}$$
 
 | Cantidad | Valor | Comentario |
 |---|---|---|
-| $K_v=K_q/A\approx Q_N/A_A$ | **0.53 m/s** por unidad de $u$ | Velocidad máxima a $u=1$. Es una estimación a partir del caudal nominal; no se midió |
-| $\omega_h$ (asimétrico, $A_A^2/C_A+A_B^2/C_B$) | **≈ 548 rad/s** (87 Hz) | El informe usa ≈ 390 rad/s (62 Hz): ver sección 7 |
-| $\zeta_h$ | **≈ 0.046** | Muy poco amortiguado |
-| Tiempo de recorrido a $u=1$ | 0.4 m / 0.53 m/s ≈ **0.75 s** | |
+| $K_v$ (señal pequeña) | **0.636 m/s** por unidad de $u$ | Promedio de extensión (0.740) y retracción (0.532), por las áreas distintas |
+| $K_v$ a $u=\pm1$ | 0.43 / 0.29 m/s | Cae por la ecuación de orificio (√Δp) |
+| $\tau$ | **8.5 ms** | Constante de tiempo de la velocidad |
+| $\theta$ | **8.8 ms** | Retardo equivalente (válvula y compresibilidad) |
+
+Para el diseño se discretiza con retenedor de orden cero a $T_s=10$ ms. El modelo lineal reproduce la respuesta al escalón del modelo no lineal (`figuras/pi_final_escalon.png`).
 
 ## 5. Lazo cerrado con el PI
 
-Controlador: $C(s)=K_p+K_i/s$, realimentación unitaria. Con $G=N/[s(\tau_vs+1)\Delta]$:
+Controlador: $C(s)=K_p+K_i/s$, integrador trapezoidal, anti-windup por *clamping*, $|u|\le1$. El lazo abierto es **tipo 2** (integrador del pistón y del PI): error nulo ante escalones y rampas de referencia.
 
-$$T(s)=\frac{X}{X_{ref}}=\frac{(K_ps+K_i)\,N(s)}{s^2(\tau_vs+1)\Delta(s)+(K_ps+K_i)\,N(s)}$$
+## 6. Diseño y justificación de las ganancias: Kp = 20, Ki = 1
 
-En el caso simétrico simplificado:
+**Especificaciones:** $M_p\le10$ %, $t_s(2\%)\le2$ s, $|e_{ss}|<2.3$ mm, margen de ganancia ≥ 10 dB y de fase ≥ 60°. Deben cumplirse con la $G(s)$ identificada y con el modelo no lineal en dos escalones: 10 mm en $x_0$ (nivelación) y 0 → 0.40 m (validación unitaria, con la válvula saturada).
 
-$$T(s)=\frac{(K_ps+K_i)K_v}{s^2(\tau_vs+1)\left(\frac{s^2}{\omega_h^2}+\frac{2\zeta_h}{\omega_h}s+1\right)+(K_ps+K_i)K_v}$$
+**Procedimiento** (`diseno_pi.m`): 14 candidatos (los PI que se usaban, `pidtune` con varios cruces y márgenes, y Ziegler–Nichols). La regla, fijada antes de correr, elige al que cumple todo con menor $t_s$ en el escalón de 10 mm y, si empatan, menor $M_p$. Solo tres cumplieron; ganó **Kp = 20, Ki = 1**.
 
-El lazo abierto es **tipo 2**: un integrador del pistón y otro del PI.
-
-## 6. Justificación de las ganancias
-
-### Kp = 60
-
-**Error en estado estacionario.**
-- Ante un escalón, $e_{ss}=0$ con cualquier $K_p$, porque la planta ya integra.
-- Ante una rampa de velocidad $v_r$, un P solo deja $e_{ss}=v_r/(K_pK_v)$. Con $K_pK_v\approx31.8\ \text{s}^{-1}$, una rampa de 10 mm/s da 0.31 mm, muy por debajo del requisito de 2.3 mm.
-- El paso del ADC (0.44 mm) se traduce en $\Delta u=K_p\cdot0.44\ \text{mm}\approx0.026$, unas 3 cuentas del PWM de 8 bits. Subir $K_p$ amplifica la cuantización en el comando.
-
-**Tiempo de asentamiento.**
-- En la zona lineal, el polo dominante está en $s\approx-K_pK_v=-31.8$: $\tau\approx31$ ms y $t_s(2\%)\approx4/(K_pK_v)\approx0.13$ s.
-- El $t_s$ medido es **1.05 s** porque con un escalón de 0.40 m la válvula satura: $u=1$ mientras $e>1/K_p=16.7$ mm y el pistón avanza a velocidad máxima (≈ 0.75 s). Coincide con $t_r=0.73$ s.
-- Es decir, el $t_s$ lo fija el caudal máximo de la válvula, no $K_p$. Subirlo solo acorta el tramo lineal final.
-
-**Estabilidad.** Con $\tau_v=2$ ms, retardo de válvula de 1 ms, retardo de muestreo $T_s/2$ y la resonancia con $\zeta_h=0.046$ (inversión de fase cerca de 194 rad/s):
-
-| $K_p$ | Margen de fase | Margen de ganancia | $t_s$ lineal | Banda de saturación |
+| Respuesta | $M_p$ | $t_r$ | $t_s$ | $\lvert e_{ss}\rvert$ |
 |---|---|---|---|---|
-| 10 | 87° | 31 dB | 0.75 s | 100 mm |
-| 30 | 83° | 21 dB | 0.25 s | 33 mm |
-| **60** | **75°** | **15 dB** | **0.13 s** | **16.7 mm** |
-| 100 | 65° | 11 dB | 0.075 s | 10 mm |
-| 150 | 53° | 7 dB | 0.05 s | 6.7 mm |
-| 300 | 13° | 1 dB | 0.025 s | 3.3 mm |
+| Lineal, $G(s)$ | 0.4 % | 0.11 s | 0.22 s | 0 |
+| No lineal, escalón de 10 mm | 2.4 % | 0.07 s | 0.28 s | 0.08 mm |
+| No lineal, 0 → 0.40 m | 0.1 % | 0.73 s | 0.96 s | 0.19 mm |
 
-$K_p=60$ deja 15 dB y 75°, y el tramo lineal ya no domina el $t_s$. Más allá de ≈ 150 el margen se degrada por la resonancia sin ganar nada en $t_s$.
-
-### Ki = 1
-
-- $T_i=K_p/K_i=60$ s: el cero del PI está en 0.017 rad/s, unas 1900 veces por debajo del cruce (≈ 32 rad/s). No cambia el margen de fase ni el sobrepaso.
-- Su función es llevar a cero el error ante perturbaciones constantes (carga, sesgo de la válvula, fugas) y ante rampas. Es lenta: constante de tiempo de decenas de segundos, mayor que los 4 s simulados.
-- El anti-windup por *clamping* evita acumular integral durante los ≈ 0.75 s de saturación; sin él habría más sobrepaso.
-
-### Sobrepaso medido (Mp = 3.43 %, 13.7 mm)
-
-El pistón entra en la banda lineal (16.7 mm) a velocidad máxima y frena con $\tau\approx31$ ms. Un primer orden puro no sobrepasaría; el 3.4 % viene de la dinámica que el modelo simple no incluye (válvula y resonancia con $\zeta_h$ bajo). Cumple Mp < 10 %.
+- **Márgenes:** cruce en 12.6 rad/s, margen de fase 73.7°, de ganancia 16.9 dB (ganancia última ≈ 140).
+- **Seguimiento del oleaje:** a 0.63 rad/s el error de seguimiento del lazo cerrado es 4.9 %.
+- **Ki = 1:** el cero del PI está en $K_i/K_p=0.05$ rad/s, dos décadas bajo el cruce: no cambia el margen ni el sobrepaso; anula el error ante perturbaciones lentas (carga, sesgo de la válvula).
+- **Escalón grande:** la válvula satura, el pistón avanza a ≈ 0.43 m/s y el $t_s$ (0.96 s) lo fija el caudal máximo, no $K_p$.
+- **Cuantización:** un paso del ADC (0.44 mm) da $\Delta u=K_p\cdot0.44$ mm ≈ 0.009, una cuenta del PWM de 8 bits.
+- **Por qué no los anteriores:** Kp = 6.7 no entra en la banda del 2 % en el escalón pequeño y deja 3.4 mm de error en el grande; Kp = 60 da 61 % de sobrepaso en el escalón pequeño con 44° de margen de fase.
 
 ### Muestreo
 
-$T_s=10$ ms ≪ $t_s$ (1.05 s). La resonancia hidráulica (≥ 62 Hz) queda por encima de Nyquist (50 Hz); si se excitara, aparecería como alias. No se espera excitarla porque la válvula opera saturada casi todo el recorrido y el frenado es suave.
+$T_s=10$ ms frente a un cruce de 12.6 rad/s (unas 25 muestras por periodo del cruce) y al retardo de 8.8 ms de la planta.
 
 ## 7. Supuestos y puntos abiertos
 
-- **Linealización:** zona lineal sin saturación, $\dot x_0=0$, volúmenes ≈ $V_{A0}$, $V_{B0}$, fricción viscosa. Con saturación manda el comportamiento no lineal (sección 6, $t_s$).
-- **$K_v$ estimado** con el caudal nominal sobre el área del pistón. El caudal real depende de la caída de presión en la válvula.
-- **$\omega_h$:** este documento da ≈ 548 rad/s con los volúmenes de `MARLUP_hydr_params.m`; el informe (`informe_pil.tex`) dice ≈ 390 rad/s. Hay que decidir cuál es la correcta (¿se incluyó el volumen de las tuberías?). Afecta el alias estimado.
-- **Ganancias en el modelo de 3 pistones:** `MODELOS/CINEMATICA/pil_ctrl3.m` usa Kp = 6.7, Ki = 1, Usat = 0.1 (nivelación de la mesa), no 60/1/1.
-- Los márgenes de la tabla son un cálculo analítico con el modelo lineal; no se validaron con una simulación en MATLAB.
+- **Identificación en un punto:** $x_0=0.23$ m y señal pequeña. A válvula abierta $K_v$ baja hasta 0.29 m/s (retracción); el diseño se verificó igual con el escalón grande.
+- **Resonancia hidráulica:** el análisis de la sección 3 predice $\omega_h\approx548$ rad/s con $\zeta_h\approx0.05$, pero el modelo simulado no la muestra. Si el actuador real la tiene, habrá que revisar el margen de ganancia.
+- **Plataforma completa:** el mismo PI se usa en `ctrl_pi3.slx` con el lazo de nivelación K = 15 (ver `MODELOS/CINEMATICA/BITACORA.md`).

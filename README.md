@@ -24,19 +24,20 @@ PIL intercambia con ella la posición y el comando por UART, paso a paso (*locks
 ### Resultados principales
 
 Escalón de 0 a 0.40 m en t = 0.5 s, 4 s simulados, Ts = 10 ms, 401 muestras por caso.
-El MiL es el mismo modelo con el bloque Model en modo Normal.
+El MiL es el mismo modelo con el bloque Model en modo Normal. Desde el 13 nov 2026 el PI es el
+**controlador único del proyecto, Kp = 20, Ki = 1** (diseñado con `MODELOS/PISTON/diseno_pi.m`).
+El informe de la Actividad 3 se entregó con Kp = 60, Ki = 1 (Mp = 3.43 %, ts = 1.05 s).
 
 | Caso | Mp (%) | tr (s) | ts 2 % (s) | e_ss (mm) | RMS(u) | RMSE vs MiL (mm) |
 |---|---|---|---|---|---|---|
-| MiL | 3.43 | 0.73 | 1.05 | 0.014 | 0.528 | — |
-| PiL ideal | 3.43 | 0.73 | 1.05 | 0.014 | 0.528 | 0 (idéntico) |
-| PiL solo cuantización ADC | 3.41 | 0.73 | 1.05 | 0.024 | 0.528 | 0.121 |
-| PiL solo error de linealidad | 3.40 | 0.73 | 1.05 | 0.076 | 0.528 | 0.089 |
-| PiL solo histéresis | 3.42 | 0.73 | 1.05 | 0.014 | 0.528 | 0.0048 |
-| PiL no ideal (las tres) | 3.47 | 0.73 | 1.05 | 0.047 | 0.528 | 0.160 |
+| MiL | 0.13 | 0.73 | 0.96 | 0.197 | 0.504 | — |
+| PiL ideal | 0.13 | 0.73 | 0.96 | 0.197 | 0.504 | 0 (idéntico) |
+| PiL solo cuantización ADC | 0.12 | 0.73 | 0.96 | 0.168 | 0.504 | 0.076 |
+| PiL solo error de linealidad | 0.11 | 0.73 | 0.96 | 0.107 | 0.504 | 0.090 |
+| PiL solo histéresis | 0.13 | 0.73 | 0.96 | 0.195 | 0.504 | 0.0019 |
+| PiL no ideal (las tres) | 0.11 | 0.73 | 0.96 | 0.080 | 0.504 | 0.163 |
 
-Requisitos: Mp < 10 % y e_ss < 2.3 mm (0.2° de nivelación). Se cumplen en todos los
-casos. La no idealidad dominante es la cuantización del ADC de 10 bits.
+Requisitos: Mp < 10 % y e_ss < 2.3 mm. Se cumplen en todos los casos.
 
 ## Cómo reproducir
 
@@ -135,45 +136,48 @@ poca memoria libre la computadora se satura.
 
    | Variable | Qué hace | Valor actual |
    |---|---|---|
-   | `Kp`, `Ki` | Ganancias del PI de cada pistón (el mismo en los tres) | 6.7, 1 |
+   | `Kp`, `Ki` | Ganancias del PI de cada pistón (el mismo en los tres) | 20, 1 |
    | `Usat` | Saturación del comando de la válvula, 1 = 100 % | 1 |
    | `en_lin`, `en_hist`, `en_q` | No idealidades del sensor: linealidad (0.09 mm), histéresis (0.004 mm) y ADC de 10 bits (0.44 mm) | 0, 0, 0 |
+   | `en_ruido`, `ruido_mm` | Ruido eléctrico en la entrada analógica, independiente por pistón, y su desviación estándar | 0, 0.44 mm |
    | `ver_mechanics` | 1 abre Mechanics Explorer (animación 3D); consume mucha memoria | 0 |
 
-   La ganancia `K` del lazo de nivelación está en los bloques `Gain` y `Gain1` del modelo (roll y
-   pitch), y la altura del oleaje `Hs` en `P-M SPECTRUM/Constant1`; `correr_pil3` los cambia por
-   opciones, sin abrir el modelo.
+   La ganancia `K = 15` del lazo de nivelación está en los bloques `Gain` y `Gain1` del modelo
+   (roll y pitch), con saturación de ±0.6 rad, y la altura del oleaje `Hs = 2 m` en
+   `P-M SPECTRUM/Constant1`; `correr_pil3` los cambia por opciones, sin abrir el modelo.
 3. **Correr desde la consola de MATLAB:**
 
    ```matlab
    cd MODELOS/CINEMATICA
    correr_pil3('mil')                                  % MiL: controlador en el PC, sin Arduino
    correr_pil3('pil', 'Puerto', "COM8")                % PiL: controlador en el Arduino
-   correr_pil3('pil', 'NoIdeal', [1 1 1], 'Kp', 10)    % sensor no ideal y otro Kp, sin editar archivos
+   correr_pil3('pil', 'NoIdeal', [1 1 1 1])           % sensor no ideal (con ruido), sin editar archivos
    ```
 
    | Opción | Por defecto | Significado |
    |---|---|---|
-   | `K` | 20 | Ganancia del lazo exterior de nivelación (0 = sin compensar) |
-   | `Hs` | 0.5 | Altura significativa del oleaje [m] |
+   | `K` | 15 | Ganancia del lazo exterior de nivelación (0 = sin compensar) |
+   | `Hs` | 2 | Altura significativa del oleaje [m] |
    | `Tsim` | 30 | Tiempo simulado [s] |
    | `TIni` | 2 | Se ignora este arranque al medir [s] |
    | `Puerto` | último disponible | Puerto serial del Arduino (solo PiL) |
-   | `Kp`, `Ki`, `Usat`, `NoIdeal` | los de `config_pil3.m` | Sobrescriben la configuración; `NoIdeal = [lin hist q]` |
+   | `Kp`, `Ki`, `Usat`, `NoIdeal` | los de `config_pil3.m` | Sobrescriben la configuración; `NoIdeal = [lin hist q ruido]` |
    | `Figura` | true | Grafica roll y pitch de la mesa |
 
    También se puede abrir el modelo y presionar *Run*: el `InitFcn` carga los parámetros y
    `config_pil3.m`. Para el PiL, antes hay que fijar el puerto con `pil3_puerto("COM8")`.
 4. **Leer el resultado.** `correr_pil3` imprime el pico y el RMS de la inclinación de la mesa
-   (roll y pitch, en grados) y lo compara con el requisito de **0.20°**. Devuelve además las
-   señales completas (`t`, `roll_deg`, `pitch_deg`).
+   (roll y pitch, en grados) y lo compara con el requisito de **1°**. Devuelve además las
+   señales completas (`t`, `roll_deg`, `pitch_deg`), el comando de las válvulas (`u`), su
+   `u_rms` y el porcentaje del tiempo en saturación.
 5. **Esperar.** El MiL de 30 s tarda ~2–3 min. El PiL tarda ~3 min por corrida, más ~1–2 min
    la primera vez, y cada vez que cambian `Kp`, `Ki` o `Usat`, porque el controlador se recompila
    y se carga al Arduino.
 
-**Los tres casos del informe del Avance 3** (MiL, PiL ideal y PiL no ideal, 30 s cada uno) se
-guardan en `DOCS/AVANCES/AVANCE 3/resultados/tres_casos.mat`; la figura y la tabla de métricas
-salen de `DOCS/AVANCES/AVANCE 3/figuras/fig_resultados.m`.
+**Los casos del informe del Avance 3** (barrido de K en MiL, MiL no ideal, PiL ideal y PiL no
+ideal, 30 s cada uno) se corren con `MODELOS/CINEMATICA/exp2_final.m` (~16 min) y se guardan en
+`DOCS/AVANCES/AVANCE 3/resultados/exp2_final.mat`; las figuras y la tabla de métricas salen de
+`DOCS/AVANCES/AVANCE 3/figuras/fig_final.m`.
 
 ### Problemas conocidos
 
@@ -188,6 +192,21 @@ salen de `DOCS/AVANCES/AVANCE 3/figuras/fig_resultados.m`.
 ## Bitácora
 
 Registro de lo hecho en el PiL de la plataforma completa. Más reciente primero.
+
+### 13 nov 2026: controlador único y escenario final
+
+Detalle, datos y decisiones en [`MODELOS/CINEMATICA/BITACORA.md`](MODELOS/CINEMATICA/BITACORA.md).
+
+- **Un solo controlador en todo el proyecto: Kp = 20, Ki = 1, K = 15.** El PI se diseñó con la
+  función de transferencia identificada en lazo abierto sobre el modelo no lineal y la respuesta
+  al escalón (`MODELOS/PISTON/diseno_pi.m`).
+- **Requisito: inclinación de la mesa ≤ 1°** con oleaje de **Hs = 2 m** (antes 0.2° con 0.5 m).
+- La saturación del lazo de nivelación pasó de ±0.1 a ±0.6 rad: con ±0.1 rad el lazo no podía
+  compensar más de ~1°, porque la mesa solo realiza el 18 % del ángulo ordenado (g = 0.184).
+- Se agregó ruido de 1 LSB, independiente en cada pistón, a las no idealidades del sensor.
+- Resultado (30 s, K = 15): pico de pitch de 2.88° sin compensar a **0.78°** (MiL = PiL ideal =
+  PiL no ideal ± 0.001°); roll de 1.52° a 0.42°. El ruido se ve en el comando de las válvulas
+  (0.012 RMS) pero cambia la inclinación en menos de 0.04°.
 
 ### 13 nov 2026: plan del experimento 1 (factorial y barrido de K)
 
@@ -267,10 +286,14 @@ MODELOS/
 │   ├── BITACORA.md            Plan y resultados de los experimentos (barrido de K, ...)
 │   ├── config_pil3.m          Ganancias, no idealidades y visualización: se edita aquí
 │   ├── correr_pil3.m          Corre el MiL o el PiL y mide la inclinación de la mesa
+│   ├── exp_corridas.m         Corre una tabla de corridas y guarda métricas tras cada una
+│   ├── exp2_final.m           Escenario final del informe (Hs = 2 m, K = 15; MiL y PiL)
+│   ├── exp1_etapa*.m          Experimentos previos (factorial y barridos con Hs = 0.5 m)
 │   └── iniciar_pil3.m, pil3_puerto.m, pil3_limpiar.m   Apoyo (los llama el modelo)
 └── PISTON/                Actividad 3
     ├── PiL.slx            Planta + sensor + bloque Model en modo PIL
     ├── ctrl_pi.slx        Controlador PI que Embedded Coder compila para el Arduino
+    ├── diseno_pi.m        Identifica G(s) y elige el PI por respuesta al escalón (figuras_diseno_pi.m)
     ├── run_pil.m          Corre los 6 casos, calcula métricas y genera figuras
     ├── demo_pil.m         Corre un caso (por defecto, el no ideal) para la demostración
     ├── pil_puerto.m       Fija el puerto serial del Arduino en ctrl_pi.slx

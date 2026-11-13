@@ -3,7 +3,83 @@
 Planes y resultados de los experimentos con `Model_aaron.slx` (MiL) y `Model_aaronC.slx` (PiL).
 Más reciente primero. El historial general del PiL está en la *Bitácora* del `README.md` de la raíz.
 
-## 13 nov 2026: plan del experimento 1, ganancia de nivelación y lazo interno (por ejecutar)
+## 13 nov 2026: controlador único, requisito de 1° y escenario final (cerrado)
+
+**Decisiones de Aarón:** un solo controlador de aquí en adelante, en todo el proyecto
+(`ctrl_pi.slx`, `ctrl_pi3.slx`, `config_pil3.m`): **Kp = 20, Ki = 1, K = 15**. El requisito pasa
+de 0.2° a **1°**, con una perturbación considerable (**Hs = 2 m**). En la sección de diseño del
+informe aparece solo el controlador final. La etapa 2 del plan de abajo (factorial con el
+controlador de la compañera) ya no se hace: su análisis justificaba Kp = 6.7, pero no
+identificaba la planta ni medía la respuesta al escalón.
+
+### Diseño del PI (`MODELOS/PISTON/diseno_pi.m`, ~3 min, sin Arduino)
+
+1. **Función de transferencia.** La linealización automática de Simulink (`linearize`) dio una
+   planta distinta en cada intento, una inestable, así que se identificó con escalones en lazo
+   abierto sobre el modelo no lineal en x0 = 0.23 m (u = ±0.02, ±0.05, ±0.1, ±1):
+   G(s) = 0.636·e^(−0.0088 s) / (s·(0.0085 s + 1)). Kv = 0.740 m/s extendiendo y 0.532 m/s
+   retrayendo; a válvula abierta, 0.43 y 0.29 m/s. **El modelo no muestra la resonancia
+   hidráulica** (ωh ≈ 420–548 rad/s) en la que se basaba el análisis anterior.
+2. **14 candidatos:** los PI en uso (6.7/1, 60/1, 20/1), `pidtune` con MF de 60° y 75° y cruces
+   de 5 a 30 rad/s, y Ziegler–Nichols.
+3. **Regla, fijada antes de correr:** Mp ≤ 10 %, ts ≤ 2 s, |e_ss| < 2.3 mm, MG ≥ 10 dB y
+   MF ≥ 60°, con G(s) y con el modelo no lineal en dos escalones (10 mm en x0 y 0 → 0.40 m).
+   Gana el de menor ts en el escalón de 10 mm; si empatan, el de menor Mp.
+4. **Resultado:** cumplen tres (20/1, 23.8/6.26 y 15.8/2.77); gana **Kp = 20, Ki = 1**: Mp 2.4 %,
+   ts 0.28 s en el escalón pequeño; Mp 0.1 %, ts 0.96 s en el grande; MG 16.9 dB y MF 73.7°.
+   Kp = 6.7 no entra en la banda del 2 % en el escalón pequeño; Kp = 60 sobrepasa 61 %;
+   Ziegler–Nichols, 180 %.
+5. **Validación unitaria con ese PI en el Arduino** (`run_pil`): Mp 0.13 %, ts 0.96 s,
+   e_ss 0.20 mm; PiL ideal idéntico al MiL, PiL no ideal a 0.16 mm RMS del MiL.
+
+### Barrido de K con el PI nuevo y Hs = 0.5 m (`exp1_etapa3*.m`)
+
+| K | 0 | 5 | 10 | 15 | 20 | 30 |
+|---|---|---|---|---|---|---|
+| Pico pitch (°) | 0.717 | 0.372 | 0.252 | 0.190 | 0.178 | 2.56 (inestable) |
+| Atenuación pitch (dB) | 0 | −5.7 | −9.2 | −11.6 | −13.4 | — |
+
+PiL en el Arduino con K = 0, 15 y 20: idéntico al MiL. Se eligió **K = 15**.
+
+### Hallazgo: la saturación del lazo exterior limitaba la nivelación
+
+Con Hs = 2 m el pitch no bajaba de 1° y **empeoraba al subir K** (K = 5: 1.88°; K = 20: 2.35°).
+Causa: el comando de ángulo estaba saturado a ±0.1 rad y la mesa solo realiza el 18 % del ángulo
+ordenado (g ≈ 0.184, sin explicar), así que el lazo podía compensar a lo sumo 0.1·g ≈ 1°. Con la
+saturación en **±0.6 rad** (unos 80 mm de elongación, dentro de la carrera libre de ±220 mm)
+el pitch con K = 15 bajó de 2.23° a 0.78°. Se cambió en los dos modelos.
+
+### No idealidades: por qué no se notaban y qué se hizo
+
+El sesgo es igual en los tres pistones (solo sube la mesa, no la inclina), el lazo exterior mide
+el ángulo de la mesa sin error y corrige los errores de posición, y las magnitudes (0.44 mm del
+ADC) equivalen a centésimas de grado. Se agregó **ruido eléctrico de σ = 0.44 mm (1 LSB),
+independiente en cada pistón**, antes del ADC (`en_ruido`, `ruido_mm` en `config_pil3.m`;
+`NoIdeal = [lin hist q ruido]` en `correr_pil3`).
+
+### Escenario final (`exp2_final.m`, ~16 min; figuras con `fig_final.m`)
+
+Hs = 2 m, Tp = 10 s, 30 s, Kp = 20, Ki = 1, Usat = 1, saturación ±0.6 rad.
+
+| Caso | Pico pitch (°) | RMS pitch (°) | Pico roll (°) | RMS roll (°) | Aten. (dB) | u_RMS máx |
+|---|---|---|---|---|---|---|
+| Sin compensar (K = 0) | 2.878 | 1.434 | 1.522 | 0.561 | 0 | 0.0013 |
+| MiL, K = 5 | 1.511 | 0.746 | 0.798 | 0.290 | −5.7 | 0.022 |
+| MiL, K = 10 | 1.028 | 0.504 | 0.549 | 0.198 | −9.1 | 0.029 |
+| **MiL, K = 15** | **0.784** | 0.382 | 0.418 | 0.149 | −11.5 | 0.032 |
+| MiL, K = 20 | 0.636 | 0.306 | 0.352 | 0.119 | −13.4 | 0.035 |
+| PiL ideal, K = 15 | 0.784 | 0.382 | 0.418 | 0.149 | −11.5 | 0.032 |
+| PiL no ideal, K = 15 | 0.783 | 0.379 | 0.426 | 0.150 | −11.6 | 0.034 |
+
+- K mínimo para 1°: (2.88/1 − 1)/0.184 = **10.2**; K = 15 deja 22 % de margen.
+- PiL ideal = MiL (RMSE 0). PiL no ideal − PiL ideal: 0.0075° RMS (0.033° máx) en pitch.
+- El ruido sí se ve en el **comando de las válvulas**: 0.012 RMS (0.05 máx), ≈ Kp·σ = 0.009 más
+  la cuantización (`figuras/pil_comando.png`).
+
+**Pendientes:** explicar g = 0.184; confirmar con Mónica y Eduardo el recorte direccional del
+bloque P-M (por él se usa Hs = 2 m); tiempo de ejecución en el ATmega328P y latencia del PiL.
+
+## 13 nov 2026: plan del experimento 1, ganancia de nivelación y lazo interno (etapas 1 y 3 ejecutadas; la 2 se descartó)
 
 **Objetivo.** Explicar por qué el lazo de nivelación atenúa -13 dB y no los -26 dB que predice
 1/(1+K) con K = 20, y producir las gráficas finales del PiL.
