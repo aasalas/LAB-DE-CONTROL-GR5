@@ -54,7 +54,18 @@ set_param(pPitch, 'DataLogging', 'on', 'DataLoggingNameMode', 'Custom', 'DataLog
 fprintf('%s | Kp=%g Ki=%g Usat=%g | K=%g Hs=%g | no idealidades [lin hist q] = [%d %d %d]\n', ...
     upper(modo), evalin('base','Kp'), evalin('base','Ki'), evalin('base','Usat'), o.K, o.Hs, ...
     evalin('base','en_lin'), evalin('base','en_hist'), evalin('base','en_q'));
-tic; out = sim(mdl); fprintf('Simulación lista en %.1f s\n', toc);
+tic;
+try
+    out = sim(mdl);
+catch err
+    if ~strcmpi(modo, 'pil'), rethrow(err); end
+    % caché de compilación "al día" pero sin wrapper.mk: se limpia y se recompila una vez
+    fprintf('Falló la compilación del PIL (%s)\nSe recompila ctrl_pi3 desde cero...\n', err.message);
+    close_system('ctrl_pi3', 0); pil3_limpiar;
+    if isempty(o.Puerto), pil3_puerto; else, pil3_puerto(o.Puerto); end
+    out = sim(mdl);
+end
+fprintf('Simulación lista en %.1f s\n', toc);
 
 [tr, xr] = leer(out.logsout, 'roll_mesa'); [tp, xp] = leer(out.logsout, 'pitch_mesa');
 xr = xr*180/pi; xp = xp*180/pi; ir = tr >= o.TIni; ip = tp >= o.TIni;
