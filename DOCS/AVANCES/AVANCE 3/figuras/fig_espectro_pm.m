@@ -1,13 +1,13 @@
 function fig_espectro_pm(Hs, Tp)
 % FIG_ESPECTRO_PM  Figura del oleaje de Pierson-Moskowitz para el informe del Avance 3.
-%   fig_espectro_pm            Hs = 0.5 m, Tp = 10 s (los del bloque P-M SPECTRUM)
+%   fig_espectro_pm            Hs = 2 m, Tp = 10 s (los del bloque P-M SPECTRUM)
 %   fig_espectro_pm(Hs, Tp)    otro estado de mar
 % Izquierda: espectro S(f) y su discretizacion. Derecha: superficie del mar eta(x, y, 0)
 % con color segun la altura. Usa la misma discretizacion, dispersion direccional y semilla
 % que la MATLAB Function de MODELOS/CINEMATICA/Model_aaronC.slx (P-M SPECTRUM), asi que
 % la superficie es la misma realizacion que ve la simulacion.
 % Escribe espectro_pm.pdf y espectro_pm.png junto a este archivo.
-if nargin < 1, Hs = 0.5; end
+if nargin < 1, Hs = 2; end
 if nargin < 2, Tp = 10;  end
 here = fileparts(mfilename('fullpath'));
 
