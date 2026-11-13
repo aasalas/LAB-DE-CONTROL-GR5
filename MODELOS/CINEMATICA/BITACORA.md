@@ -94,6 +94,36 @@ que debería ser estable. Si no lo es, ese resultado también se anota.
   que la conclusión vale también en el Arduino, sobre todo con Usat = 0.1, donde el redondeo en
   `single` podría pesar más.
 
+#### Resultados crudos de la etapa 1 (MiL, 14 nov; sin analizar)
+
+Ejecutado por Sonnet con `exp1_etapa1.m`. Datos: `DOCS/AVANCES/AVANCE 3/resultados/exp1_etapa1_mil.{csv,mat,log}`.
+Atenuación = 20·log10(RMS pitch / RMS pitch con K = 0); K = 0 da RMS pitch 0.367° y pico 0.717°.
+
+| # | K | Kp | Usat | Pico pitch (°) | RMS pitch (°) | Atenuación (dB) | u_RMS máx | % saturada | Estable |
+|---|---|---|---|---|---|---|---|---|---|
+| 0 | 0 | 6.7 | 1 | 0.717 | 0.367 | 0 | 0.0013 | 0 | sí |
+| 1 | 5 | 3 | 0.1 | 0.437 | 0.213 | -4.7 | 0.0051 | 0 | sí |
+| 2 | 40 | 3 | 0.1 | 0.110 | 0.050 | -17.4 | 0.0097 | 0 | sí |
+| 3 | 5 | 20 | 0.1 | 0.372 | 0.190 | -5.7 | 0.0053 | 0 | sí |
+| 4 | 40 | 20 | 0.1 | 0.253 | 0.106 | -10.8 | 0.091 | 75 | sí, saturada |
+| 5 | 5 | 3 | 1 | 0.437 | 0.213 | -4.7 | 0.0051 | 0 | sí |
+| 6 | 40 | 3 | 1 | 0.110 | 0.050 | -17.4 | 0.0097 | 0 | sí |
+| 7 | 5 | 20 | 1 | 0.372 | 0.190 | -5.7 | 0.0053 | 0 | sí |
+| 8 | 40 | 20 | 1 | 2.757 | 0.815 | +6.9 | 0.187 | 0 | **no** (peor que K = 0) |
+| C | 14 | 8 | 0.3 | 0.207 | 0.104 | -11.0 | 0.0078 | 0 | sí |
+
+Observaciones para el análisis (sin interpretar todavía):
+- Usat no tiene efecto donde el comando nunca llega al límite: las parejas 1/5, 2/6 y 3/7 son idénticas. Solo importa en K = 40 y Kp = 20 (4 contra 8).
+- Con Kp = 20 y K = 40 el lazo se vuelve inestable (corrida 8); con Usat = 0.1 queda en un ciclo límite saturado el 75 % del tiempo (corrida 4).
+- El u_RMS normal es de ~0.005, muy por debajo de Usat = 0.1 que usaba Mónica.
+- La atenuación mejora con K con Kp = 3 (−4.7 a −17.4 dB), pero un Kp mayor no la mejora: la hipótesis "un lazo interno más lento limita la atenuación" no se ve a simple vista.
+- El RMS de pitch con K = 0 es 0.367° y no 0.335° como en la tabla del 13 nov: hay que aclarar la diferencia (¿Tsim, TIni o la semilla?).
+- Tiempos: MiL de 63–109 s por corrida, 10 corridas en unos 13 min.
+
+**Falta de la etapa 1:** las 2 corridas PiL de confirmación y el análisis de efectos (Opus). La
+"peor esquina" es inestable, así que Opus debe decidir si se confirma en PiL esa esquina o la
+siguiente (corrida 4).
+
 ### Etapa 2: el mismo factorial con el controlador B (cuando lleguen las ganancias)
 
 - Kp y Ki pasan a ser los del controlador B. El factorial queda en 2² (K × Usat) más el punto
