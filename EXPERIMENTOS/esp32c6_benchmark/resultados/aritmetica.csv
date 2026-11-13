@@ -1,0 +1,7 @@
+operacion,ns_por_op,Mops_s
+int32 mul+add,25.177,39.719
+float mul+add,533.494,1.874
+double mul+add,1159.61,0.862
+float div,793.113,1.261
+double div,2649.961,0.377
+sqrtf,4596.378,0.218
