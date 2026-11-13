@@ -272,7 +272,7 @@ Las ganancias se sintonizaron experimentalmente en simulación; esta sección ve
 
 La saturación se fija en $\pm1$ (todo el rango de la válvula). Con $\pm0.1$, la velocidad máxima del vástago sería $0.1K_v=\SI{53}{mm/s}$ y la zona lineal se reduciría a errores menores a $0.1/K_p\approx\SI{15}{mm}$. Para el oleaje de diseño, la velocidad que exige la nivelación es del orden de \SI{3.5}{mm/s} (de \eqref{eq:jacobiano} y las velocidades angulares de la base), así que en régimen la válvula no satura con ninguno de los dos límites; el límite de $\pm1$ importa en los transitorios grandes, como el arranque o un cambio de altura. La velocidad de respuesta en pequeña señal la fija $K_p$, no la saturación.
 
-\pendiente{Confirmar los valores finales de $K_p$, $K_i$ y la saturación usados en las corridas (en \texttt{pil3\_iniciar.m} los valores por defecto son $6.7$, $1$ y $0.1$).}
+Los valores usados en las corridas son $K_p=6.7$, $K_i=1$ y $U_{sat}=1$, y se editan en un solo archivo (\texttt{config\_pil3.m}) para iterar experimentos. Su sintonía fue experimental; el diseño de un controlador con ganancias justificadas queda como trabajo aparte.
 
 \textit{Lazo exterior (nivelación).} Si el lazo interno sigue su referencia con una dinámica $G_i(s)\approx1/(s/\omega_b+1)$, $\omega_b=K_pK_v$, la inclinación de la mesa es aproximadamente la de la base más la comandada, $\alpha=\alpha_b+G_i(s)\,\alpha_c$. Con \eqref{eq:lazo_ext},
 \begin{equation}
@@ -292,9 +292,9 @@ Con $K=20$, el lazo atenúa la inclinación de la base a $1/(1+K)\approx0.048$ (
 \section{Interfaz sensor/actuador -- MCU}
 \label{sec:interfaz}
 % Criterio C2: rangos de voltaje, resolución del ADC, PWM, escalamiento físico <-> cuentas.
-Cada cilindro usa la misma cadena de conversión validada en el PiL unitario \cite{pil_unitario}: sensor magnetostrictivo de \SIrange{0}{10}{V} sobre \SI{450}{mm}, divisor 1:2, ADC de 10 bits (\SI{0.44}{mm} por cuenta) y comando de válvula de $\pm\SI{10}{V}$ generado con PWM de 8 bits y un amplificador.
+Cada cilindro usa la misma cadena de conversión validada en el PiL unitario \cite{pil_unitario}: sensor magnetostrictivo de \SIrange{0}{10}{V} sobre \SI{450}{mm}, divisor 1:2, ADC de 10 bits (\SI{0.44}{mm} por cuenta) y comando de válvula de $\pm\SI{10}{V}$ generado con PWM de 8 bits ($\Delta u=2/256\approx0.0078$) y un amplificador.
 
-\pendiente{Tabla de conversión para los tres canales: pines del ADC y del PWM usados en el Arduino, y escalamiento de la trama (posición y referencia en unidades de \SI{0.01}{mm}, comando como $u\cdot32767$).}
+En el modelo de Simulink, esa interfaz es el subsistema \texttt{Interfaz sensor}, que se interpone entre la planta y el controlador. Para cada uno de los tres cilindros, la posición medida pasa por un sesgo (error de linealidad), una histéresis (\textit{backlash}), un cuantizador de \SI{0.44}{mm} (ADC) y una saturación al rango del ADC (\SIrange{0}{449.6}{mm}); a continuación se muestrea a $T_s=\SI{10}{ms}$ y se convierte a precisión simple, que es el tipo que maneja el AVR. El subsistema \texttt{Interfaz actuador} convierte el comando de vuelta a doble precisión y lo reparte a cada válvula. Con las no idealidades desactivadas, esos bloques son transparentes. Las unidades de la interfaz son metros para posición y referencia, y valor normalizado $u\in[-1,1]$ para el comando.
 
 % =====================================================================
 \section{Implementación del controlador en hardware}
@@ -307,7 +307,7 @@ I_i[k] &= I_i[k-1]+\tfrac{K_iT_s}{2}\big(e_i[k]+e_i[k-1]\big),\\
 u_i[k] &= \operatorname{sat}\big(K_p\,e_i[k]+I_i[k]\big),\qquad i=1,2,3.
 \end{aligned}
 \end{equation}
-El periodo es muy menor que la constante de tiempo del lazo interno (\SI{0.28}{s}) y que el periodo pico del oleaje (\SI{10}{s}). La misma ecuación se ejecuta en MATLAB (MiL, \texttt{pil\_ctrl3.m}) y en el firmware del Arduino (\texttt{pil\_arduino\_3p.ino}).
+El periodo es muy menor que la constante de tiempo del lazo interno (\SI{0.28}{s}) y que el periodo pico del oleaje (\SI{10}{s}). Los tres PI forman un solo modelo, \texttt{ctrl\_pi3.slx}, con las referencias y las posiciones como vectores de tres elementos en precisión simple; usan el bloque Discrete PID Controller de Simulink, como en la validación unitaria. Embedded Coder genera el código C a partir de ese modelo y lo compila para el ATmega328P, sin escribir firmware a mano. El mismo modelo se simula en el PC (MiL) con el bloque en modo normal y se ejecuta en la placa (PiL) con el bloque en modo PIL.
 
 \pendiente{Tiempo de ejecución medido de los tres PI en el ATmega328P frente a los \SI{10}{ms} del periodo.}
 
@@ -315,25 +315,32 @@ El periodo es muy menor que la constante de tiempo del lazo interno (\SI{0.28}{s
 \section{Arquitectura PiL y comunicación}
 \label{sec:pil}
 % Criterio C4: protocolo documentado, sincronización y latencia acotada.
-En cada periodo, Simulink envía al Arduino una trama de 14 bytes con las tres posiciones medidas y las tres referencias, y recibe una de 10 bytes con los tres comandos (Tabla~\ref{tab:tramas}). Las ganancias se configuran al inicio con una trama propia, sin volver a cargar el firmware. La simulación espera la respuesta antes de avanzar (\textit{lockstep}). A \SI{115200}{baud}, las dos tramas ocupan $(14+10)\cdot10/115200\approx\SI{2.1}{ms}$ de los \SI{10}{ms} del periodo.
+La plataforma completa se simula en Simulink (\texttt{Model\_aaronC.slx}) y los tres PI se ejecutan en un Arduino UNO R3 mediante un único bloque Model en modo \textit{Processor-in-the-Loop} que referencia a \texttt{ctrl\_pi3} (Fig.~\ref{fig:bloquepil}). En cada periodo $T_s$, Simulink envía por el puerto serie las tres referencias y las tres posiciones medidas, el MCU ejecuta un paso del código generado y devuelve los tres comandos (Tabla~\ref{tab:interfazpil}). La simulación avanza solo cuando recibe la respuesta (\textit{lockstep}), por lo que la comunicación no se traslada a la planta. El enlace es de \SI{115200}{baud}; el programa lo carga y lo comunica el \textit{Simulink Support Package for Arduino Hardware}. En el AVR un \texttt{double} ocupa 4 bytes, por lo que la interfaz del controlador es de precisión simple.
 
 \begin{table}[H]
 \centering
-\caption{Tramas del protocolo serie de los tres pistones}
-\label{tab:tramas}
+\caption{Señales entre Simulink y el MCU en cada periodo}
+\label{tab:interfazpil}
 \small
-\begin{tabularx}{\columnwidth}{lL}
+\begin{tabularx}{\columnwidth}{llLr}
 \toprule
-Trama & Contenido \\
+Sentido & Señal & Contenido & Datos \\
 \midrule
-Simulink $\rightarrow$ MCU (14 B) & \texttt{0xAA} $|$ $x_1\,x_2\,x_3$ $|$ $r_1\,r_2\,r_3$ (uint16, \SI{0.01}{mm}) $|$ XOR \\
-MCU $\rightarrow$ Simulink (10 B) & \texttt{0x55} $|$ $u_1\,u_2\,u_3$ (int16, $u\cdot32767$) $|$ secuencia $|$ estado $|$ XOR \\
-Configuración (14 B) & \texttt{0xA5} $|$ $K_p\,K_i\,U_{sat}$ (float32) $|$ XOR \\
+Simulink $\rightarrow$ MCU & \texttt{ref} & Referencia de los tres cilindros [m] & $3\times4$ B \\
+Simulink $\rightarrow$ MCU & \texttt{x} & Posición medida (tras el ADC) [m] & $3\times4$ B \\
+MCU $\rightarrow$ Simulink & \texttt{u} & Comando de las tres válvulas, en $[-1,1]$ & $3\times4$ B \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-\pendiente{Diagrama de la arquitectura PiL de los tres pistones y latencia medida.}
+Por cada periodo viajan 36 bytes de carga útil, es decir, al menos $36\cdot10/115200\approx\SI{3.1}{ms}$ de los \SI{10}{ms} del periodo, sin contar el encabezado del protocolo de Simulink. \pendiente{Latencia medida de un paso PiL.}
+
+\begin{figure}[H]
+\centering
+\figpendiente{3.2cm}{Captura del nivel principal de Model\_aaronC.slx: Interfaz sensor, Controlador (bloque Model en modo PIL) e Interfaz actuador.}
+\caption{Arquitectura PiL de la plataforma completa.}
+\label{fig:bloquepil}
+\end{figure}
 
 % =====================================================================
 \section{Implementación 1: sensores y actuadores ideales}
