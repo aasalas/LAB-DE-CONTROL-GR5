@@ -52,4 +52,28 @@ title(ax1, 'Escalón de 0 a 0.40 m, modelo no lineal'); legend(ax1, h, nom, 'Loc
 ylabel(ax2, 'u'); xlabel(ax2, 't (s)');
 exportgraphics(f, fullfile(figd, 'diseno_pi_escalon_grande.png'), 'Resolution', 200);
 exportgraphics(f, fullfile(figd, 'diseno_pi_escalon_grande.pdf'), 'ContentType', 'vector');
+
+% Figura 3 (informe): solo el controlador elegido, escalón pequeño (con el modelo lineal) y grande
+if ele ~= ""
+    k = T(T.id == ele, :); P = S.(ele).peq; Gr = S.(ele).gra; Ll = S.(ele).lin;
+    f = figure('Units', 'centimeters', 'Position', [2 2 18 9], 'Color', 'w', 'Visible', 'off'); theme(f, 'light');
+    tl = tiledlayout(f, 3, 2, 'TileSpacing', 'compact', 'Padding', 'compact');
+    ax = nexttile(tl, 1, [2 1]); hold on; grid on; box on; ax.FontSize = 8;
+    plot(P(:,1) - 1.5, (P(:,3) - 0.23)*1e3, '-', 'Color', col.E, 'LineWidth', 1.6);
+    plot(Ll(:,1), Ll(:,2)*10, 'k--', 'LineWidth', 1); yline([9.8 10.2], ':', 'Color', [0.5 0.5 0.5]);
+    xlim([-0.05 1]); ylim([-0.5 11.5]); ylabel('x - x_0 (mm)');
+    title(sprintf('Escalón de 10 mm: M_p = %.1f %%, t_s = %.2f s', k.Mp_10mm, k.ts_10mm), 'FontWeight', 'normal');
+    legend({'modelo no lineal', 'G(s) identificada', 'banda de \pm2 %'}, 'Location', 'southeast', 'FontSize', 7);
+    ax = nexttile(tl, 2, [2 1]); hold on; grid on; box on; ax.FontSize = 8;
+    plot(Gr(:,1) - 0.5, Gr(:,3)*1e3, '-', 'Color', col.E, 'LineWidth', 1.6); plot(Gr(:,1) - 0.5, Gr(:,2)*1e3, 'k:');
+    xlim([-0.05 2]); ylim([-20 440]); ylabel('x (mm)');
+    title(sprintf('Escalón de 0 a 0.40 m: M_p = %.1f %%, t_s = %.2f s', k.Mp_400mm, k.ts_400mm), 'FontWeight', 'normal');
+    legend({'modelo no lineal', 'referencia'}, 'Location', 'southeast', 'FontSize', 7);
+    ax = nexttile(tl, 5); hold on; grid on; box on; ax.FontSize = 8;
+    stairs(P(:,1) - 1.5, P(:,4), '-', 'Color', col.E); xlim([-0.05 1]); ylabel('u'); xlabel('t (s)');
+    ax = nexttile(tl, 6); hold on; grid on; box on; ax.FontSize = 8;
+    stairs(Gr(:,1) - 0.5, Gr(:,4), '-', 'Color', col.E); xlim([-0.05 2]); ylim([-0.1 1.1]); ylabel('u'); xlabel('t (s)');
+    exportgraphics(f, fullfile(figd, 'pi_final_escalon.png'), 'Resolution', 200);
+    exportgraphics(f, fullfile(figd, 'pi_final_escalon.pdf'), 'ContentType', 'vector');
+end
 fprintf('Figuras en %s\n', figd);
