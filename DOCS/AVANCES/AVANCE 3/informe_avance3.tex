@@ -272,18 +272,18 @@ Las ganancias se sintonizaron experimentalmente en simulación; esta sección ve
 
 La saturación se fija en $\pm1$ (todo el rango de la válvula). Con $\pm0.1$, la velocidad máxima del vástago sería $0.1K_v=\SI{53}{mm/s}$ y la zona lineal se reduciría a errores menores a $0.1/K_p\approx\SI{15}{mm}$. Para el oleaje de diseño, la velocidad que exige la nivelación es del orden de \SI{3.5}{mm/s} (de \eqref{eq:jacobiano} y las velocidades angulares de la base), así que en régimen la válvula no satura con ninguno de los dos límites; el límite de $\pm1$ importa en los transitorios grandes, como el arranque o un cambio de altura. La velocidad de respuesta en pequeña señal la fija $K_p$, no la saturación.
 
-\pendiente{Confirmar los valores finales de $K_p$, $K_i$ y la saturación usados en las corridas (en \texttt{pil3\_iniciar.m} los valores por defecto son $6.7$, $1$ y $0.1$).}
+Los valores usados en las corridas son $K_p=6.7$, $K_i=1$ y $U_{sat}=1$, y se editan en un solo archivo (\texttt{config\_pil3.m}) para iterar experimentos. Su sintonía fue experimental; el diseño de un controlador con ganancias justificadas queda como trabajo aparte.
 
 \textit{Lazo exterior (nivelación).} Si el lazo interno sigue su referencia con una dinámica $G_i(s)\approx1/(s/\omega_b+1)$, $\omega_b=K_pK_v$, la inclinación de la mesa es aproximadamente la de la base más la comandada, $\alpha=\alpha_b+G_i(s)\,\alpha_c$. Con \eqref{eq:lazo_ext},
 \begin{equation}
 \frac{\alpha(s)}{\alpha_b(s)}=\frac{1}{1+K\,G_i(s)}.
 \label{eq:sensibilidad}
 \end{equation}
-Con $K=20$, el lazo atenúa la inclinación de la base a $1/(1+K)\approx0.048$ (\SI{-26}{dB}) en toda la banda del oleaje. Como el lazo es solo proporcional, queda siempre un residuo proporcional a la inclinación de la base: con un \textit{pitch} máximo de \SI{1}{\degree}, el residuo ideal es de unos \SI{0.05}{\degree}.
+Con $K=20$ y un lazo interno ideal, este modelo simplificado predice una atenuación a $1/(1+K)\approx0.048$ (\SI{-26}{dB}) en toda la banda del oleaje. La simulación atenúa menos: la inclinación pasa de \SI{0.72}{\degree} a \SI{0.16}{\degree} de pico (unas 4.5 veces, \SI{-13}{dB}; Sec.~\ref{sec:resultados}), lo que equivale a una ganancia de lazo efectiva cercana a 3.5 y no a 20. \pendiente{Explicar la diferencia con el modelo simplificado (seguimiento real del lazo interno ante la dinámica del oleaje, acople con la plataforma, saturaciones) y confirmarla con una corrida en que se varíe $K$.} Como el lazo es solo proporcional, siempre queda un residuo proporcional a la inclinación de la base.
 
-\textit{Límite por resolución.} El residuo real lo fija la medición de posición. Un paso del ADC de 10 bits sobre \SI{450}{mm} equivale a \SI{0.44}{mm}, y por \eqref{eq:jacobiano} eso corresponde a $0.44/113\approx\SI{3.9}{mrad}\approx\SI{0.22}{\degree}$ de \textit{pitch} (\SI{0.19}{\degree} de \textit{roll}). Es decir, la resolución del sensor ya es del orden del requisito de nivelación de \SI{0.2}{\degree} y de las propias inclinaciones de la base. Esto explica que con ángulos pequeños las perturbaciones se atenúen pero no se cancelen: por debajo de unos \SI{0.2}{\degree} el controlador no distingue la inclinación de la mesa. \pendiente{verificar con los resultados del PiL ideal frente al no ideal.}
+\textit{Efecto de la resolución del sensor.} Un paso del ADC de 10 bits sobre \SI{450}{mm} es de \SI{0.44}{mm}; por \eqref{eq:jacobiano}, el error de \SI{0.22}{mm} de redondeo en la posición de un cilindro equivale a menos de \SI{0.12}{\degree} de inclinación en el peor caso. Sin embargo, el lazo exterior realimenta el ángulo de la mesa, que el modelo mide sin error, y por eso compensa los errores de medición de posición del lazo interno. La simulación lo confirma: las no idealidades del sensor cambian el pico de la inclinación en menos de \SI{0.005}{\degree} (Sec.~\ref{sec:noideal}). La resolución del ADC no es, por tanto, lo que limita la nivelación; la limita la ganancia efectiva del lazo.
 
-\textit{Mejoras posibles.} (i) Agregar prealimentación de la inclinación de la base medida con una IMU, como en la Fig.~\ref{fig:cascada}, o acción integral en el lazo exterior, para eliminar el residuo $1/(1+K)$; (ii) mejorar la resolución de la medición de posición (ADC de 12 bits o más) o medir directamente la inclinación de la mesa.
+\textit{Mejoras posibles.} (i) Aumentar $K$ o agregar acción integral en el lazo exterior, para reducir el residuo; (ii) agregar prealimentación de la inclinación de la base medida con una IMU, como en la Fig.~\ref{fig:cascada}; (iii) si el ángulo de la mesa se midiera en hardware con un sensor de resolución finita, repetir el análisis de resolución, que en este modelo no aparece porque la medición del ángulo es ideal.
 
 \subsection{Plataforma}
 \pendiente{Modelo de Simscape Multibody: cuerpos, masas e inercias de la mesa, uniones (juntas prismáticas con movimiento impuesto, unión de 4 GDL de la base), y cómo se obtiene $F_{L,i}$.}
@@ -292,9 +292,9 @@ Con $K=20$, el lazo atenúa la inclinación de la base a $1/(1+K)\approx0.048$ (
 \section{Interfaz sensor/actuador -- MCU}
 \label{sec:interfaz}
 % Criterio C2: rangos de voltaje, resolución del ADC, PWM, escalamiento físico <-> cuentas.
-Cada cilindro usa la misma cadena de conversión validada en el PiL unitario \cite{pil_unitario}: sensor magnetostrictivo de \SIrange{0}{10}{V} sobre \SI{450}{mm}, divisor 1:2, ADC de 10 bits (\SI{0.44}{mm} por cuenta) y comando de válvula de $\pm\SI{10}{V}$ generado con PWM de 8 bits y un amplificador.
+Cada cilindro usa la misma cadena de conversión validada en el PiL unitario \cite{pil_unitario}: sensor magnetostrictivo de \SIrange{0}{10}{V} sobre \SI{450}{mm}, divisor 1:2, ADC de 10 bits (\SI{0.44}{mm} por cuenta) y comando de válvula de $\pm\SI{10}{V}$ generado con PWM de 8 bits ($\Delta u=2/256\approx0.0078$) y un amplificador.
 
-\pendiente{Tabla de conversión para los tres canales: pines del ADC y del PWM usados en el Arduino, y escalamiento de la trama (posición y referencia en unidades de \SI{0.01}{mm}, comando como $u\cdot32767$).}
+En el modelo de Simulink, esa interfaz es el subsistema \texttt{Interfaz sensor}, que se interpone entre la planta y el controlador. Para cada uno de los tres cilindros, la posición medida pasa por un sesgo (error de linealidad), una histéresis (\textit{backlash}), un cuantizador de \SI{0.44}{mm} (ADC) y una saturación al rango del ADC (\SIrange{0}{449.6}{mm}); a continuación se muestrea a $T_s=\SI{10}{ms}$ y se convierte a precisión simple, que es el tipo que maneja el AVR. El subsistema \texttt{Interfaz actuador} convierte el comando de vuelta a doble precisión y lo reparte a cada válvula. Con las no idealidades desactivadas, esos bloques son transparentes. Las unidades de la interfaz son metros para posición y referencia, y valor normalizado $u\in[-1,1]$ para el comando.
 
 % =====================================================================
 \section{Implementación del controlador en hardware}
@@ -307,7 +307,7 @@ I_i[k] &= I_i[k-1]+\tfrac{K_iT_s}{2}\big(e_i[k]+e_i[k-1]\big),\\
 u_i[k] &= \operatorname{sat}\big(K_p\,e_i[k]+I_i[k]\big),\qquad i=1,2,3.
 \end{aligned}
 \end{equation}
-El periodo es muy menor que la constante de tiempo del lazo interno (\SI{0.28}{s}) y que el periodo pico del oleaje (\SI{10}{s}). La misma ecuación se ejecuta en MATLAB (MiL, \texttt{pil\_ctrl3.m}) y en el firmware del Arduino (\texttt{pil\_arduino\_3p.ino}).
+El periodo es muy menor que la constante de tiempo del lazo interno (\SI{0.28}{s}) y que el periodo pico del oleaje (\SI{10}{s}). Los tres PI forman un solo modelo, \texttt{ctrl\_pi3.slx}, con las referencias y las posiciones como vectores de tres elementos en precisión simple; usan el bloque Discrete PID Controller de Simulink, como en la validación unitaria. Embedded Coder genera el código C a partir de ese modelo y lo compila para el ATmega328P, sin escribir firmware a mano. El mismo modelo se simula en el PC (MiL) con el bloque en modo normal y se ejecuta en la placa (PiL) con el bloque en modo PIL.
 
 \pendiente{Tiempo de ejecución medido de los tres PI en el ATmega328P frente a los \SI{10}{ms} del periodo.}
 
@@ -315,42 +315,47 @@ El periodo es muy menor que la constante de tiempo del lazo interno (\SI{0.28}{s
 \section{Arquitectura PiL y comunicación}
 \label{sec:pil}
 % Criterio C4: protocolo documentado, sincronización y latencia acotada.
-En cada periodo, Simulink envía al Arduino una trama de 14 bytes con las tres posiciones medidas y las tres referencias, y recibe una de 10 bytes con los tres comandos (Tabla~\ref{tab:tramas}). Las ganancias se configuran al inicio con una trama propia, sin volver a cargar el firmware. La simulación espera la respuesta antes de avanzar (\textit{lockstep}). A \SI{115200}{baud}, las dos tramas ocupan $(14+10)\cdot10/115200\approx\SI{2.1}{ms}$ de los \SI{10}{ms} del periodo.
+La plataforma completa se simula en Simulink (\texttt{Model\_aaronC.slx}) y los tres PI se ejecutan en un Arduino UNO R3 mediante un único bloque Model en modo \textit{Processor-in-the-Loop} que referencia a \texttt{ctrl\_pi3} (Fig.~\ref{fig:bloquepil}). En cada periodo $T_s$, Simulink envía por el puerto serie las tres referencias y las tres posiciones medidas, el MCU ejecuta un paso del código generado y devuelve los tres comandos (Tabla~\ref{tab:interfazpil}). La simulación avanza solo cuando recibe la respuesta (\textit{lockstep}), por lo que la comunicación no se traslada a la planta. El enlace es de \SI{115200}{baud}; el programa lo carga y lo comunica el \textit{Simulink Support Package for Arduino Hardware}. En el AVR un \texttt{double} ocupa 4 bytes, por lo que la interfaz del controlador es de precisión simple.
 
 \begin{table}[H]
 \centering
-\caption{Tramas del protocolo serie de los tres pistones}
-\label{tab:tramas}
+\caption{Señales entre Simulink y el MCU en cada periodo}
+\label{tab:interfazpil}
 \small
-\begin{tabularx}{\columnwidth}{lL}
+\begin{tabularx}{\columnwidth}{llLr}
 \toprule
-Trama & Contenido \\
+Sentido & Señal & Contenido & Datos \\
 \midrule
-Simulink $\rightarrow$ MCU (14 B) & \texttt{0xAA} $|$ $x_1\,x_2\,x_3$ $|$ $r_1\,r_2\,r_3$ (uint16, \SI{0.01}{mm}) $|$ XOR \\
-MCU $\rightarrow$ Simulink (10 B) & \texttt{0x55} $|$ $u_1\,u_2\,u_3$ (int16, $u\cdot32767$) $|$ secuencia $|$ estado $|$ XOR \\
-Configuración (14 B) & \texttt{0xA5} $|$ $K_p\,K_i\,U_{sat}$ (float32) $|$ XOR \\
+Simulink $\rightarrow$ MCU & \texttt{ref} & Referencia de los tres cilindros [m] & $3\times4$ B \\
+Simulink $\rightarrow$ MCU & \texttt{x} & Posición medida (tras el ADC) [m] & $3\times4$ B \\
+MCU $\rightarrow$ Simulink & \texttt{u} & Comando de las tres válvulas, en $[-1,1]$ & $3\times4$ B \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-\pendiente{Diagrama de la arquitectura PiL de los tres pistones y latencia medida.}
+Por cada periodo viajan 36 bytes de carga útil, es decir, al menos $36\cdot10/115200\approx\SI{3.1}{ms}$ de los \SI{10}{ms} del periodo, sin contar el encabezado del protocolo de Simulink. \pendiente{Latencia medida de un paso PiL.}
+
+\begin{figure}[H]
+\centering
+\figpendiente{3.2cm}{Captura del nivel principal de Model\_aaronC.slx: Interfaz sensor, Controlador (bloque Model en modo PIL) e Interfaz actuador.}
+\caption{Arquitectura PiL de la plataforma completa.}
+\label{fig:bloquepil}
+\end{figure}
 
 % =====================================================================
 \section{Implementación 1: sensores y actuadores ideales}
 \label{sec:ideal}
 % Criterio C5: PiL ideal frente al MiL con una métrica definida.
-\begin{figure}[H]
-\centering
-\figpendiente{4cm}{Inclinación de la mesa ($\alpha$, $\theta$) frente a la de la base: MiL y PiL ideal superpuestos.}
-\caption{MiL frente a PiL ideal. \pendiente{}}
-\label{fig:ideal}
-\end{figure}
-\pendiente{Métrica de coincidencia (RMSE y error máximo de la inclinación de la mesa entre MiL y PiL ideal).}
+Con sensores y actuadores ideales se simularon \SI{30}{s} de oleaje ($H_s=\SI{0.5}{m}$, $T_p=\SI{10}{s}$, $K=20$, $K_p=6.7$, $K_i=1$, $U_{sat}=1$) con el controlador en el PC (MiL) y en el Arduino UNO (PiL). La métrica de coincidencia es el RMSE y el error máximo de la inclinación de la mesa entre ambos, calculados sobre una malla común, ya que el solver de la planta es de paso variable.
+
+El PiL ideal reproduce al MiL con error nulo en \textit{pitch} y en \textit{roll}: RMSE de \SI{0.0000}{\degree} y error máximo de \SI{0.0000}{\degree}, frente a un pico de inclinación de \SI{0.159}{\degree} (Fig.~\ref{fig:resultados}). El código C generado por Embedded Coder y ejecutado en el ATmega328P calcula, por tanto, exactamente lo mismo que el modelo en el PC.
 
 % =====================================================================
 \section{Implementación 2: sensores y actuadores no ideales}
 \label{sec:noideal}
 % Criterio C6: al menos 3 no idealidades justificadas con hojas de datos.
+Se activaron tres no idealidades del sensor de posición de cada cilindro (Tabla~\ref{tab:noideal}), con los mismos valores que en la validación unitaria \cite{pil_unitario}.
+
 \begin{table}[H]
 \centering
 \caption{No idealidades del sensor de posición de cada cilindro}
@@ -366,34 +371,55 @@ Cuantización & ADC de 10 bits sobre \SI{450}{mm} & \SI{0.44}{mm} \\
 \bottomrule
 \end{tabularx}
 \end{table}
-\pendiente{Fuente de cada valor (hoja de datos del CDH1) y efecto esperado en la inclinación usando \eqref{eq:jacobiano}.}
+\pendiente{Fuente de cada valor en la hoja de datos del sensor del cilindro CDH1 \cite{rexroth}.}
+
+Con las tres activas, el PiL se aparta del MiL en \SI{0.0011}{\degree} RMS (\SI{0.0048}{\degree} como máximo) en \textit{pitch} y en \SI{0.0015}{\degree} RMS (\SI{0.0044}{\degree} como máximo) en \textit{roll}. El pico de inclinación pasa de \SI{0.159}{\degree} a \SI{0.159}{\degree} en \textit{pitch} y de \SI{0.083}{\degree} a \SI{0.084}{\degree} en \textit{roll}, de modo que el requisito de \SI{0.2}{\degree} se mantiene. La degradación es despreciable porque el lazo exterior realimenta el ángulo de la mesa, que no pasa por el ADC, y corrige los errores de medición de posición del lazo interno (Sec.~\ref{sec:ganancias}).
 
 % =====================================================================
 \section{Resultados y análisis comparativo}
 \label{sec:resultados}
 % Criterio R3: MiL vs PiL ideal vs PiL no ideal, con métricas y conclusiones.
+La Tabla~\ref{tab:resultados} y la Fig.~\ref{fig:resultados} comparan los cuatro casos durante \SI{30}{s}, sin contar los primeros \SI{2}{s} de arranque de los pistones.
+
 \begin{table}[H]
 \centering
-\caption{Desempeño de la nivelación \pendiente{}}
+\caption{Inclinación de la mesa ($H_s=\SI{0.5}{m}$, \SI{30}{s}). La atenuación es la del valor RMS de \textit{pitch} respecto del caso sin compensar}
 \label{tab:resultados}
-\small
-\begin{tabularx}{\columnwidth}{lCCCC}
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabularx}{\columnwidth}{lCCCCC}
 \toprule
-Caso & $|\theta|_{max}$ (\si{\degree}) & $\theta_{RMS}$ (\si{\degree}) & Atenuación (dB) & $u_{RMS}$ \\
+Caso & Pico \textit{pitch} (\si{\degree}) & RMS \textit{pitch} (\si{\degree}) & Pico \textit{roll} (\si{\degree}) & RMS \textit{roll} (\si{\degree}) & Aten. (dB) \\
 \midrule
-Base sin compensar & & & --- & --- \\
-MiL & & & & \\
-PiL ideal & & & & \\
-PiL no ideal & & & & \\
+Sin compensar ($K=0$) & 0.717 & 0.335 & 0.375 & 0.133 & --- \\
+MiL & 0.159 & 0.073 & 0.083 & 0.029 & $-13.2$ \\
+PiL ideal & 0.159 & 0.073 & 0.083 & 0.029 & $-13.2$ \\
+PiL no ideal & 0.159 & 0.073 & 0.084 & 0.030 & $-13.2$ \\
 \bottomrule
 \end{tabularx}
 \end{table}
-\pendiente{Gráficas y análisis: comparar la atenuación medida con la predicha por \eqref{eq:sensibilidad} y el residuo con el límite de resolución de la Sec.~\ref{sec:ganancias}.}
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.8\textwidth]{resultados_nivelacion.pdf}
+\caption{Inclinación de la mesa en \textit{pitch}. Arriba: sin compensar, MiL, PiL ideal y PiL no ideal (los tres últimos se superponen). Abajo: diferencia entre cada PiL y el MiL. Generada con \texttt{figuras/fig\_resultados.m}.}
+\label{fig:resultados}
+\end{figure*}
+
+El lazo de nivelación reduce la inclinación de la mesa unas 4.5 veces (\SI{-13}{dB}) en pico y en valor RMS, tanto en \textit{pitch} como en \textit{roll}, y deja el pico de \textit{pitch} por debajo del requisito de \SI{0.2}{\degree} (\SI{0.159}{\degree}, contra \SI{0.717}{\degree} sin compensar). El PiL ideal y el MiL son idénticos, y las no idealidades del sensor modifican el resultado en menos de \SI{0.005}{\degree}. La atenuación medida es menor que la predicha por el modelo simplificado, de \SI{-26}{dB} (Sec.~\ref{sec:ganancias}).
+
+\pendiente{Esfuerzo de control ($u_{RMS}$ de cada válvula) y, si se desea, el mismo análisis con otros valores de $K$ y de $H_s$.}
 
 % =====================================================================
 \section{Conclusiones}
 \label{sec:conclusiones}
-\pendiente{3--4 conclusiones con números, limitaciones y trabajo futuro.}
+\begin{itemize}
+\item El controlador de los tres pistones, generado por Embedded Coder desde \texttt{ctrl\_pi3.slx} y ejecutado en el ATmega328P, reproduce exactamente la simulación en el PC: RMSE de \SI{0.0000}{\degree} y error máximo nulo en \SI{30}{s} de oleaje, con la plataforma completa en Simulink y un solo bloque Model en modo PIL.
+\item Con $K=20$, el lazo de nivelación reduce el pico de inclinación de \textit{pitch} de \SI{0.717}{\degree} a \SI{0.159}{\degree} (\SI{-13}{dB}) y el de \textit{roll} de \SI{0.375}{\degree} a \SI{0.083}{\degree}, por debajo del requisito de \SI{0.2}{\degree}. La atenuación es menor que la del modelo simplificado (\SI{-26}{dB}), cuya causa queda por establecer.
+\item Las tres no idealidades del sensor (linealidad, histéresis y ADC de 10 bits) degradan el resultado en menos de \SI{0.005}{\degree}, porque el lazo exterior realimenta el ángulo de la mesa, medido sin error en el modelo.
+\end{itemize}
+
+Como limitaciones, el ángulo de la mesa se mide idealmente en la simulación, la ejecución en \textit{lockstep} no representa la latencia real de la UART ni la variabilidad del tiempo de cómputo, y las ganancias se sintonizaron experimentalmente. Como trabajo futuro se propone diseñar el controlador con ganancias justificadas analíticamente, modelar el sensor de inclinación con sus no idealidades y medir el tiempo de ejecución del controlador en el MCU frente al periodo de \SI{10}{ms}.
 
 % =====================================================================
 \begin{thebibliography}{9}
@@ -408,6 +434,6 @@ PiL no ideal & & & & \\
 % =====================================================================
 \appendix
 \section*{Anexo: reproducibilidad}
-Repositorio: \url{https://github.com/aasalas/LAB-DE-CONTROL-GR5}, commit \pendiente{hash}. Modelo de la plataforma: \texttt{MODELOS/CINEMATICA/Model\_aaronC.slx}, con parámetros en \texttt{MARLUP\_hydr\_params.m}. PiL de los tres pistones: \texttt{pil3\_iniciar.m}, \texttt{pil\_ctrl3.m}, \texttt{pil\_arduino\_3p/} y \texttt{prueba\_PIL.m}. Modelo matemático del actuador: \texttt{MODELOS/PISTON/MODELO\_MATEMATICO.md}. Validación unitaria de un actuador: \texttt{MODELOS/PISTON} y \texttt{DOCS/INFORME\_PIL}.
+Repositorio: \url{https://github.com/aasalas/LAB-DE-CONTROL-GR5}, commit \pendiente{hash}. Modelo de la plataforma: \texttt{MODELOS/CINEMATICA/Model\_aaronC.slx}, con parámetros en \texttt{MARLUP\_hydr\_params.m}. PiL de los tres pistones: controlador \texttt{ctrl\_pi3.slx}, configuración \texttt{config\_pil3.m} y corridas con \texttt{correr\_pil3.m}; los pasos para reproducirlo, y una bitácora, están en el \texttt{README.md}. Datos y figuras de los resultados: \texttt{DOCS/AVANCES/AVANCE 3/resultados/} y \texttt{figuras/fig\_resultados.m}. Modelo matemático del actuador: \texttt{MODELOS/PISTON/MODELO\_MATEMATICO.md}. Validación unitaria de un actuador: \texttt{MODELOS/PISTON} y \texttt{DOCS/INFORME\_PIL}.
 
 \end{document}

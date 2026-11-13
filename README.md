@@ -111,22 +111,157 @@ aparece el error de `wrapper.mk`, ejecute `limpiar_pil` y vuelva a presionar *Ru
 | *Data type "double" is not supported for SIL or PIL* | En el AVR un double ocupa 4 bytes; la interfaz de `ctrl_pi` es `single`. |
 | *gmake: wrapper.mk: No such file or directory* | Código "al día" reutilizado desde la caché; `run_pil` borra `slprj/ert/ctrl_pi` y `ctrl_pi.slxc` y reintenta. Si aparece al correr desde la interfaz, ejecute `limpiar_pil` y vuelva a correr. |
 
+## PiL de la plataforma completa (3 pistones)
+
+`MODELOS/CINEMATICA/Model_aaronC.slx` simula MARLUP completo (oleaje de Pierson–Moskowitz,
+cinemática inversa, tres actuadores hidráulicos y la plataforma en Simscape Multibody) con los
+tres controladores PI en **un solo** bloque Model en modo PIL, que referencia `ctrl_pi3.slx`.
+`Model_aaron.slx` es el mismo modelo con ese bloque en modo Normal (MiL).
+
+En el nivel principal del modelo, `Interfaz sensor` agrega las no idealidades y convierte a
+`single`, `Controlador` es el bloque PIL, e `Interfaz actuador` reparte el comando a los pistones.
+
+### Cómo correr el experimento
+
+**Requisitos:** los mismos que el PiL de un pistón (MATLAB R2026a con Simulink, Embedded Coder y el
+Support Package de Arduino, ver *Cómo reproducir*), más Simscape Multibody. El modelo es pesado:
+con 8 GB de RAM conviene **cerrar VS Code, el navegador y demás programas** antes de simular; con
+poca memoria libre la computadora se satura.
+
+1. **Preparar el equipo.** Cerrar programas, conectar solo el Arduino UNO por USB y ver su puerto
+   (`serialportlist("available")` en MATLAB o el Administrador de dispositivos). Para el MiL no
+   hace falta el Arduino.
+2. **Elegir el experimento** editando `MODELOS/CINEMATICA/config_pil3.m`:
+
+   | Variable | Qué hace | Valor actual |
+   |---|---|---|
+   | `Kp`, `Ki` | Ganancias del PI de cada pistón (el mismo en los tres) | 6.7, 1 |
+   | `Usat` | Saturación del comando de la válvula, 1 = 100 % | 1 |
+   | `en_lin`, `en_hist`, `en_q` | No idealidades del sensor: linealidad (0.09 mm), histéresis (0.004 mm) y ADC de 10 bits (0.44 mm) | 0, 0, 0 |
+   | `ver_mechanics` | 1 abre Mechanics Explorer (animación 3D); consume mucha memoria | 0 |
+
+   La ganancia `K` del lazo de nivelación está en los bloques `Gain` y `Gain1` del modelo (roll y
+   pitch), y la altura del oleaje `Hs` en `P-M SPECTRUM/Constant1`; `correr_pil3` los cambia por
+   opciones, sin abrir el modelo.
+3. **Correr desde la consola de MATLAB:**
+
+   ```matlab
+   cd MODELOS/CINEMATICA
+   correr_pil3('mil')                                  % MiL: controlador en el PC, sin Arduino
+   correr_pil3('pil', 'Puerto', "COM8")                % PiL: controlador en el Arduino
+   correr_pil3('pil', 'NoIdeal', [1 1 1], 'Kp', 10)    % sensor no ideal y otro Kp, sin editar archivos
+   ```
+
+   | Opción | Por defecto | Significado |
+   |---|---|---|
+   | `K` | 20 | Ganancia del lazo exterior de nivelación (0 = sin compensar) |
+   | `Hs` | 0.5 | Altura significativa del oleaje [m] |
+   | `Tsim` | 30 | Tiempo simulado [s] |
+   | `TIni` | 2 | Se ignora este arranque al medir [s] |
+   | `Puerto` | último disponible | Puerto serial del Arduino (solo PiL) |
+   | `Kp`, `Ki`, `Usat`, `NoIdeal` | los de `config_pil3.m` | Sobrescriben la configuración; `NoIdeal = [lin hist q]` |
+   | `Figura` | true | Grafica roll y pitch de la mesa |
+
+   También se puede abrir el modelo y presionar *Run*: el `InitFcn` carga los parámetros y
+   `config_pil3.m`. Para el PiL, antes hay que fijar el puerto con `pil3_puerto("COM8")`.
+4. **Leer el resultado.** `correr_pil3` imprime el pico y el RMS de la inclinación de la mesa
+   (roll y pitch, en grados) y lo compara con el requisito de **0.20°**. Devuelve además las
+   señales completas (`t`, `roll_deg`, `pitch_deg`).
+5. **Esperar.** El MiL de 30 s tarda ~2–3 min. El PiL tarda ~3 min por corrida, más ~1–2 min
+   la primera vez, y cada vez que cambian `Kp`, `Ki` o `Usat`, porque el controlador se recompila
+   y se carga al Arduino.
+
+**Los tres casos del informe del Avance 3** (MiL, PiL ideal y PiL no ideal, 30 s cada uno) se
+guardan en `DOCS/AVANCES/AVANCE 3/resultados/tres_casos.mat`; la figura y la tabla de métricas
+salen de `DOCS/AVANCES/AVANCE 3/figuras/fig_resultados.m`.
+
+### Problemas conocidos
+
+| Síntoma | Causa y solución |
+|---|---|
+| Se abre Mechanics Explorer y la computadora se satura | Poner `ver_mechanics = 0` en `config_pil3.m` y, en modelos viejos, `set_param(modelo, 'SimMechanicsOpenEditorOnUpdate', 'off')`. |
+| *Errors occurred while building "ctrl_pi3"* / *wrapper.mk* | Caché de compilación desactualizada. `correr_pil3` ya la limpia y reintenta una vez; a mano: `pil3_limpiar`. |
+| *An error occurred while calling the SIL or PIL target connectivity implementation* | Falló la comunicación serial. Revisar el puerto y que ningún otro programa (Arduino IDE, monitor serial) lo use. `correr_pil3` reintenta una vez. |
+| *File Changed On Disk* al guardar un modelo | El modelo se cambió desde otro MATLAB o desde git. Elegir *Cancel*, cerrar con `bdclose all` y volver a abrirlo. Los `.slx` son binarios y no se pueden fusionar. |
+| `Unrecognized function or variable 'Kp'` al presionar *Run* | El `InitFcn` no corrió: abrir el modelo desde la carpeta `MODELOS/CINEMATICA` o ejecutar `iniciar_pil3` antes. |
+
+## Bitácora
+
+Registro de lo hecho en el PiL de la plataforma completa. Más reciente primero.
+
+### 13 nov 2026: PiL con bloque Model sobre el Arduino
+
+- Se reemplazó el MATLAB Function que hablaba por serie con tramas propias (`pil_ctrl3`,
+  `pil_arduino_3p`) por un **bloque Model en modo PIL** que referencia `ctrl_pi3.slx`, igual que el
+  PiL de un pistón. El código del Arduino ahora lo genera Embedded Coder. `Model_aaronC.slx` es el
+  PiL y `Model_aaron.slx` el MiL; se eliminaron los scripts viejos que dependían de la variable
+  global `PIL`.
+- Ganancias, saturación y no idealidades quedaron en `config_pil3.m`; `correr_pil3` las acepta
+  también como opciones para iterar rápido.
+- **PiL en el Arduino (COM8), solver de paso variable, 30 s, K = 20, Hs = 0.5 m,
+  Kp = 6.7, Ki = 1, Usat = 1:**
+
+  | Caso | Pico pitch (°) | RMS pitch (°) | Pico roll (°) | RMS roll (°) | RMSE pitch vs MiL (°) |
+  |---|---|---|---|---|---|
+  | Sin compensar (K = 0), MiL | 0.717 | 0.335 | 0.375 | 0.133 | — |
+  | MiL | 0.159 | 0.073 | 0.083 | 0.029 | — |
+  | PiL ideal | 0.159 | 0.073 | 0.083 | 0.029 | 0.0000 |
+  | PiL no ideal (las tres) | 0.159 | 0.073 | 0.084 | 0.030 | 0.0011 |
+
+  (Métricas con `TIni = 2 s`, sobre una malla común; el requisito es 0.20°.)
+- **El PiL ideal coincide con el MiL**: error nulo en toda la corrida. El bloque PIL en un modelo
+  con solver de paso variable y Simscape Multibody funciona sin cambios.
+- **Las no idealidades casi no degradan la nivelación** (diferencia máxima de 0.005° en pitch).
+  Es lo contrario de lo que se había predicho en el informe: el lazo exterior realimenta el
+  **ángulo de la mesa**, que el modelo mide sin error; el ADC, el sesgo y la histéresis solo
+  afectan al lazo interno de cada cilindro, y el lazo exterior los compensa.
+- Problemas resueltos: error de sintaxis en `iniciar_pil3.m` (rompía el *Run*), caché de
+  compilación del PIL (reintento automático) y saturación de memoria por Mechanics Explorer.
+- **El lazo de nivelación atenúa unas 4.5 veces (-13 dB)** el pico de inclinación (pitch 0.717° a
+  0.159°), menos que los -26 dB que predice el modelo simplificado 1/(1+K) con K = 20; la causa
+  queda por establecer.
+- **Pendiente:** tiempo de ejecución del controlador en el ATmega328P y latencia medida de un paso
+  PiL.
+
+### 12 nov 2026: integración y limpieza del repositorio
+
+- Se fusionó la rama de Mónica (PiL de 3 pistones con tramas seriales propias, Kp = 6.7,
+  Ki = 1, Usat = 0.1) en `aaron` y luego en `develop`; `develop` se publicó en GitHub.
+- Se ordenó el repositorio: caché de Simulink fuera de git, duplicados y archivos sin uso
+  eliminados, y se documentó el modelo del pistón en `MODELOS/PISTON/MODELO_MATEMATICO.md`.
+- Se restauró `cyl.x_init = 0.23` m en `MARLUP_hydr_params.m` (referencia base de los pistones en
+  el modelo de 3 pistones); `run_pil` y `demo_pil` fijan 0 para la validación de un pistón, que
+  se verificó sin cambios (Mp = 3.43 %).
+- Esqueleto del informe del Avance 3 en `DOCS/AVANCES/AVANCE 3/`, con la sección del modelo
+  matemático y la figura del espectro de Pierson–Moskowitz.
+- **Hallazgo:** el bloque de oleaje solo usa las direcciones de 0° a 90° (la dispersión
+  direccional se recorta), por lo que el mar simulado tiene una altura significativa efectiva de
+  ~0.22 m en lugar de 0.5 m. Falta confirmarlo con quien lo escribió.
+
+### Validación unitaria (un pistón)
+
+Resultados del PiL de un pistón en la sección *Resultados principales*, más arriba; el informe
+está en `DOCS/INFORME_PIL`.
+
 ## Estructura del repositorio
 
 ```
 CAD/                       Piezas y ensamble de SolidWorks
 DOCS/
 ├── ENUNCIADOS/            Enunciados de las actividades 1–3
-├── AVANCES/               Avances 1 y 2 (PDF) y presentación del avance 1
+├── AVANCES/               Avances 1 y 2 (PDF), presentación del avance 1 y AVANCE 3/ (informe del PiL de 3 pistones)
 ├── INFORME_PIL/           Informe de la actividad 3 (.tex, .pdf y figuras/)
 ├── FIGS/                  Figuras de los avances 2 y 3 y referencias del CAD
 └── CERTIFICADOS/          Certificados de Simulink y Simscape
 MODELOS/
 ├── CINEMATICA/            MARLUP completo (3 pistones)
 │   ├── MARLUP_hydr_params.m   Parámetros hidráulicos (los usa también MODELOS/PISTON)
-│   ├── Model_aaron.slx        Modelo base; Model_aaronC.slx es el que corre el PiL de 3 pistones
-│   ├── pil3_iniciar.m, pil_ctrl3.m, pil_arduino_3p/   PiL de 3 pistones (Kp = 6.7, Ki = 1, Usat = 0.1)
-│   └── prueba_PIL.m, comparar_pil.m, barrido_K.m      Prueba, MiL vs PiL y barrido de la ganancia K
+│   ├── Model_aaronC.slx       Plataforma completa con el controlador en el Arduino (PiL)
+│   ├── Model_aaron.slx        La misma plataforma con el controlador en el PC (MiL)
+│   ├── ctrl_pi3.slx           Los tres PI que Embedded Coder compila para el Arduino
+│   ├── config_pil3.m          Ganancias, no idealidades y visualización: se edita aquí
+│   ├── correr_pil3.m          Corre el MiL o el PiL y mide la inclinación de la mesa
+│   └── iniciar_pil3.m, pil3_puerto.m, pil3_limpiar.m   Apoyo (los llama el modelo)
 └── PISTON/                Actividad 3
     ├── PiL.slx            Planta + sensor + bloque Model en modo PIL
     ├── ctrl_pi.slx        Controlador PI que Embedded Coder compila para el Arduino
