@@ -3,15 +3,15 @@ function res = correr_pil3(modo, varargin)
 %   correr_pil3('mil')                  MiL: Model_aaron.slx (controlador en el PC, sin Arduino)
 %   correr_pil3('pil')                  PiL: Model_aaronC.slx (controlador en el Arduino)
 %   correr_pil3('pil', 'Puerto', "COM8")
-%   correr_pil3('mil', 'K', 25, 'Hs', 0.5, 'Tsim', 30)
-%   correr_pil3('pil', 'NoIdeal', [1 1 1], 'Kp', 10)     sensor no ideal y otro Kp, sin editar archivos
-% Opciones: K (lazo de nivelación, 20), Hs (altura significativa, 0.5 m), Tsim (30 s),
+%   correr_pil3('mil', 'K', 10, 'Hs', 1, 'Tsim', 30)
+%   correr_pil3('pil', 'NoIdeal', [1 1 1 1])            sensor no ideal, sin editar archivos
+% Opciones: K (lazo de nivelación, 15), Hs (altura significativa, 2 m), Tsim (30 s),
 %   TIni (2 s, se ignora el arranque), Puerto (último disponible), Figura (true),
-%   Kp, Ki, Usat y NoIdeal = [lin hist q] (por defecto los de config_pil3.m).
+%   Kp, Ki, Usat y NoIdeal = [lin hist q ruido] (por defecto los de config_pil3.m).
 % Las ganancias del PI y las no idealidades se editan en config_pil3.m.
 % Devuelve las inclinaciones pico y RMS de la mesa [grados], u_rms y sat_pct (por válvula) y las señales.
 p = inputParser;
-addParameter(p, 'K', 20); addParameter(p, 'Hs', 0.5); addParameter(p, 'Tsim', 30);
+addParameter(p, 'K', 15); addParameter(p, 'Hs', 2); addParameter(p, 'Tsim', 30);
 addParameter(p, 'TIni', 2); addParameter(p, 'Puerto', []); addParameter(p, 'Figura', true);
 addParameter(p, 'Kp', []); addParameter(p, 'Ki', []); addParameter(p, 'Usat', []); addParameter(p, 'NoIdeal', []);
 parse(p, varargin{:}); o = p.Results;
@@ -21,6 +21,7 @@ ovr = struct();
 for c = {'Kp', 'Ki', 'Usat'}, if ~isempty(o.(c{1})), ovr.(c{1}) = o.(c{1}); end, end
 if ~isempty(o.NoIdeal)
     ovr.en_lin = o.NoIdeal(1); ovr.en_hist = o.NoIdeal(2); ovr.en_q = o.NoIdeal(3);
+    if numel(o.NoIdeal) > 3, ovr.en_ruido = o.NoIdeal(4); else, ovr.en_ruido = 0; end
 end
 assignin('base', 'ovr_pil3', ovr);
 sobre = onCleanup(@() evalin('base', 'clear ovr_pil3')); %#ok<NASGU>
@@ -53,9 +54,9 @@ set_param(pRoll,  'DataLogging', 'on', 'DataLoggingNameMode', 'Custom', 'DataLog
 set_param(pPitch, 'DataLogging', 'on', 'DataLoggingNameMode', 'Custom', 'DataLoggingName', 'pitch_mesa');
 set_param(pU,     'DataLogging', 'on', 'DataLoggingNameMode', 'Custom', 'DataLoggingName', 'u_valvulas');
 
-fprintf('%s | Kp=%g Ki=%g Usat=%g | K=%g Hs=%g | no idealidades [lin hist q] = [%d %d %d]\n', ...
+fprintf('%s | Kp=%g Ki=%g Usat=%g | K=%g Hs=%g | no idealidades [lin hist q ruido] = [%d %d %d %d]\n', ...
     upper(modo), evalin('base','Kp'), evalin('base','Ki'), evalin('base','Usat'), o.K, o.Hs, ...
-    evalin('base','en_lin'), evalin('base','en_hist'), evalin('base','en_q'));
+    evalin('base','en_lin'), evalin('base','en_hist'), evalin('base','en_q'), evalin('base','en_ruido'));
 tic;
 try
     out = sim(mdl);
@@ -79,14 +80,14 @@ res = struct('modo', lower(modo), 't', tr, 'roll_deg', xr, 'pitch_deg', xp, ...
 iu = tu >= o.TIni; Us = evalin('base', 'Usat');
 res.t_u = tu; res.u = xu; res.Usat = Us;
 res.u_rms = sqrt(mean(xu(iu,:).^2, 1)); res.sat_pct = 100*mean(abs(xu(iu,:)) >= 0.999*Us, 1);
-fprintf('Roll : pico %.3f deg, RMS %.3f deg\nPitch: pico %.3f deg, RMS %.3f deg   (requisito 0.20 deg)\n', ...
+fprintf('Roll : pico %.3f deg, RMS %.3f deg\nPitch: pico %.3f deg, RMS %.3f deg   (requisito 1 deg)\n', ...
     res.pico_roll, res.rms_roll, res.pico_pitch, res.rms_pitch);
 fprintf('u_RMS por válvula: %s | %% del tiempo saturada: %s\n', mat2str(res.u_rms, 3), mat2str(res.sat_pct, 3));
 
 if o.Figura
     f = figure('Name', ['correr_pil3 ' modo], 'NumberTitle', 'off'); theme(f, 'light');
-    plot(tr, xr, tp, xp); grid on; yline([-0.2 0.2], 'r--');
-    xlabel('t (s)'); ylabel('inclinación de la mesa (°)'); legend('roll', 'pitch', 'requisito \pm0.2°');
+    plot(tr, xr, tp, xp); grid on; yline([-1 1], 'r--');
+    xlabel('t (s)'); ylabel('inclinación de la mesa (°)'); legend('roll', 'pitch', 'requisito \pm1°');
     title(sprintf('%s: pico pitch %.3f°, roll %.3f°', upper(modo), res.pico_pitch, res.pico_roll));
 end
 end

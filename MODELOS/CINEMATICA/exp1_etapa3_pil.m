@@ -4,5 +4,5 @@
 Kb = [0; 15; 20]; n = numel(Kb);
 corridas = table("P" + string(Kb), repmat("pil", n, 1), Kb, 20*ones(n,1), ones(n,1), ones(n,1), ...
     'VariableNames', {'id', 'modo', 'K', 'Kp', 'Ki', 'Usat'});
-T = exp_corridas(corridas, 'exp1_etapa3_pil');
+T = exp_corridas(corridas, 'exp1_etapa3_pil', 'Hs', 0.5);
 disp(T(:, {'id','K','Kp','estable','t_sim_s','pico_pitch','rms_pitch','pico_roll','rms_roll','urms_max','sat_pct_max','atten_pitch_dB','atten_roll_dB'}))
