@@ -111,22 +111,48 @@ aparece el error de `wrapper.mk`, ejecute `limpiar_pil` y vuelva a presionar *Ru
 | *Data type "double" is not supported for SIL or PIL* | En el AVR un double ocupa 4 bytes; la interfaz de `ctrl_pi` es `single`. |
 | *gmake: wrapper.mk: No such file or directory* | Código "al día" reutilizado desde la caché; `run_pil` borra `slprj/ert/ctrl_pi` y `ctrl_pi.slxc` y reintenta. Si aparece al correr desde la interfaz, ejecute `limpiar_pil` y vuelva a correr. |
 
+## PiL de la plataforma completa (3 pistones)
+
+`MODELOS/CINEMATICA/Model_aaronC.slx` simula MARLUP completo (oleaje de Pierson–Moskowitz,
+cinemática inversa, tres actuadores hidráulicos y la plataforma en Simscape Multibody) con los
+tres controladores PI en **un solo** bloque Model en modo PIL, que referencia `ctrl_pi3.slx`.
+`Model_aaron.slx` es el mismo modelo con ese bloque en modo Normal (MiL).
+
+```matlab
+cd MODELOS/CINEMATICA
+correr_pil3('mil')                         % MiL, sin Arduino
+correr_pil3('pil', 'Puerto', "COM8")       % PiL, con el Arduino conectado
+correr_pil3('mil', 'K', 25, 'Tsim', 30)    % otras opciones: K, Hs, Tsim, TIni
+```
+
+Para iterar experimentos se edita solo **`config_pil3.m`**: `Kp`, `Ki`, `Usat` (saturación del
+comando), las tres no idealidades del sensor y `ver_mechanics` (abre o no Mechanics Explorer,
+apagado por defecto porque consume mucha memoria). Al cambiar una ganancia en modo PiL el
+controlador se recompila y se vuelve a cargar al Arduino (~1 min). También se puede presionar
+*Run* directamente en el modelo: el `InitFcn` carga los parámetros y la configuración.
+
+En el nivel principal del modelo, `Interfaz sensor` agrega las no idealidades y convierte a
+`single`, `Controlador` es el bloque PIL, e `Interfaz actuador` reparte el comando a los pistones.
+
 ## Estructura del repositorio
 
 ```
 CAD/                       Piezas y ensamble de SolidWorks
 DOCS/
 ├── ENUNCIADOS/            Enunciados de las actividades 1–3
-├── AVANCES/               Avances 1 y 2 (PDF) y presentación del avance 1
+├── AVANCES/               Avances 1 y 2 (PDF), presentación del avance 1 y AVANCE 3/ (informe del PiL de 3 pistones)
 ├── INFORME_PIL/           Informe de la actividad 3 (.tex, .pdf y figuras/)
 ├── FIGS/                  Figuras de los avances 2 y 3 y referencias del CAD
 └── CERTIFICADOS/          Certificados de Simulink y Simscape
 MODELOS/
 ├── CINEMATICA/            MARLUP completo (3 pistones)
 │   ├── MARLUP_hydr_params.m   Parámetros hidráulicos (los usa también MODELOS/PISTON)
-│   ├── Model_aaron.slx        Modelo base; Model_aaronC.slx es el que corre el PiL de 3 pistones
-│   ├── pil3_iniciar.m, pil_ctrl3.m, pil_arduino_3p/   PiL de 3 pistones (Kp = 6.7, Ki = 1, Usat = 0.1)
-│   └── prueba_PIL.m, comparar_pil.m, barrido_K.m      Prueba, MiL vs PiL y barrido de la ganancia K
+│   ├── Model_aaronC.slx       Plataforma completa con el controlador en el Arduino (PiL)
+│   ├── Model_aaron.slx        La misma plataforma con el controlador en el PC (MiL)
+│   ├── ctrl_pi3.slx           Los tres PI que Embedded Coder compila para el Arduino
+│   ├── config_pil3.m          Ganancias, no idealidades y visualización: se edita aquí
+│   ├── correr_pil3.m          Corre el MiL o el PiL y mide la inclinación de la mesa
+│   └── iniciar_pil3.m, pil3_puerto.m, pil3_limpiar.m   Apoyo (los llama el modelo)
 └── PISTON/                Actividad 3
     ├── PiL.slx            Planta + sensor + bloque Model en modo PIL
     ├── ctrl_pi.slx        Controlador PI que Embedded Coder compila para el Arduino
