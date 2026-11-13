@@ -3,7 +3,9 @@
 % Al cambiar Kp, Ki o Usat el modelo PiL recompila y vuelve a cargar el Arduino (~1 min).
 
 %% Controlador PI de cada pistón (ctrl_pi3.slx, mismo PI en los tres)
-Kp   = 6.7;     % ganancia proporcional [1/m]: u = Kp*e, e en metros
+% Kp = 20, Ki = 1 salen del experimento de diseño MODELOS/PISTON/diseno_pi.m (antes Kp = 6.7).
+% Con este PI la ganancia de nivelación K debe ser <= 20: con K = 30 la plataforma es inestable.
+Kp   = 20;      % ganancia proporcional [1/m]: u = Kp*e, e en metros
 Ki   = 1;       % ganancia integral [1/(m*s)]
 Usat = 1;       % saturación del comando de la válvula: u en [-Usat, Usat] (1 = 100 %)
 
