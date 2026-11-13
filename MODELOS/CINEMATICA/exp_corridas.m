@@ -1,6 +1,6 @@
 function T = exp_corridas(corridas, archivo, varargin)
 % EXP_CORRIDAS  Ejecuta una tabla de corridas de correr_pil3 y guarda las métricas tras cada una.
-%   T = exp_corridas(corridas, 'exp1_etapa1')
+%   T = exp_corridas(corridas, 'exp2_final', 'Hs', 2)      (ver exp2_final.m)
 % corridas: tabla con columnas id (string), modo ('mil'|'pil'), K, Kp, Ki, Usat y, opcional,
 %   noideal (fila [lin hist q ruido]; por defecto sensor ideal).
 % Guarda DOCS/AVANCES/AVANCE 3/resultados/<archivo>.mat (con las señales) y .csv (métricas).
