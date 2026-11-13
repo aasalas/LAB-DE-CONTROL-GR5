@@ -119,11 +119,14 @@ DOCS/
 ├── ENUNCIADOS/            Enunciados de las actividades 1–3
 ├── AVANCES/               Avances 1 y 2 (PDF) y presentación del avance 1
 ├── INFORME_PIL/           Informe de la actividad 3 (.tex, .pdf y figuras/)
-├── FIGS/                  Figuras de los avances 2 y 3
+├── FIGS/                  Figuras de los avances 2 y 3 y referencias del CAD
 └── CERTIFICADOS/          Certificados de Simulink y Simscape
 MODELOS/
-├── CINEMATICA/            Modelo completo de MARLUP (Model_aaron.slx) y
-│                          parámetros hidráulicos MARLUP_hydr_params.m (los usa el PiL)
+├── CINEMATICA/            MARLUP completo (3 pistones)
+│   ├── MARLUP_hydr_params.m   Parámetros hidráulicos (los usa también MODELOS/PISTON)
+│   ├── Model_aaron.slx        Modelo base; Model_aaronC.slx es el que corre el PiL de 3 pistones
+│   ├── pil3_iniciar.m, pil_ctrl3.m, pil_arduino_3p/   PiL de 3 pistones (Kp = 6.7, Ki = 1, Usat = 0.1)
+│   └── prueba_PIL.m, comparar_pil.m, barrido_K.m      Prueba, MiL vs PiL y barrido de la ganancia K
 └── PISTON/                Actividad 3
     ├── PiL.slx            Planta + sensor + bloque Model en modo PIL
     ├── ctrl_pi.slx        Controlador PI que Embedded Coder compila para el Arduino
@@ -131,7 +134,8 @@ MODELOS/
     ├── demo_pil.m         Corre un caso (por defecto, el no ideal) para la demostración
     ├── pil_puerto.m       Fija el puerto serial del Arduino en ctrl_pi.slx
     ├── metricas_pil.m, figuras_pil.m, limpiar_pil.m
-    ├── MiL.slx, parameters.m   Modelo del actuador del Avance 2
+    ├── MiL.slx            Mismo lazo con el controlador en el PC (referencia MiL)
+    ├── MODELO_MATEMATICO.md   Modelo, función de transferencia y justificación de Kp y Ki
     ├── resultados/        Métricas, log y CSV por caso
     └── figuras/           Figuras del informe
 ```
