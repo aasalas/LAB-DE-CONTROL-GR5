@@ -33,7 +33,9 @@ cyl.d_rod = 0.028;                                              % Cylinder rod d
 cyl.stroke = 0.45;                                              % Cylinder stroke leght [m]
 cyl.A_piston = pi*(cyl.d_piston/2)^2;                           % Cylinder piston area [m^2]
 cyl.A_rodside = (pi*(cyl.d_piston/2)^2)-(pi*(cyl.d_rod/2)^2) ;  % Cylinder rod side area [m^2]
-cyl.x_init = 0;                                              % Starting position of cylinder [m]
+cyl.x_init = 0.23;                                           % Posicion inicial [m]: media carrera, igual a la
+                                                               % referencia base del modelo de 3 pistones (Constant4).
+                                                               % MODELOS/PISTON (validacion unitaria) la fija en 0.
 cyl.V0A =  0.3/1e3;                                             % V0 in the A side of the cylinder [m^3]
 cyl.V0B = 0.15/1e3;                                             % V0 in the B side of the cylinder [m^3]
 cyl.p0A = 25e5 ;                                                % Cylinder A-chamber initial pressure [Pa]
