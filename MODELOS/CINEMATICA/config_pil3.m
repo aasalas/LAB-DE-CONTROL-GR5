@@ -17,3 +17,11 @@ ver_mechanics = 0;   % 1 = abre Mechanics Explorer (animación 3D) al simular; 0
 
 %% Lazo exterior de nivelación: la ganancia K está en los bloques Gain y Gain1 del modelo
 %  (roll y pitch). Gain2 = 0 deja el lazo de heave apagado.
+
+%% Sobrescritura desde la línea de comandos (la usa correr_pil3; no hace falta tocarla)
+if exist('ovr_pil3', 'var')
+    for f_ = fieldnames(ovr_pil3)'
+        eval([f_{1} ' = ovr_pil3.(f_{1});']);
+    end
+    clear f_
+end
