@@ -12,5 +12,8 @@ en_lin  = 0;    % error de linealidad: sesgo de 0.09 mm (peor caso)
 en_hist = 0;    % histéresis: backlash de 0.004 mm
 en_q    = 0;    % ADC de 10 bits sobre 450 mm: paso de 0.44 mm
 
+%% Visualización
+ver_mechanics = 0;   % 1 = abre Mechanics Explorer (animación 3D) al simular; 0 = solo los scopes
+
 %% Lazo exterior de nivelación: la ganancia K está en los bloques Gain y Gain1 del modelo
 %  (roll y pitch). Gain2 = 0 deja el lazo de heave apagado.

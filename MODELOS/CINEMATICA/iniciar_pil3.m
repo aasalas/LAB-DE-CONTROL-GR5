@@ -10,4 +10,10 @@ q_ = 0.45/1024;                                        % ADC de 10 bits sobre 45
 sens = struct('bias', 0.09e-3*en_lin, 'backlash', 0.004e-3*en_hist, ...
               'q', 1e-12, 'xmin', -inf, 'xmax', inf);
 if en_q, sens.q = q_; sens.xmin = 0; sens.xmax = 1023*q_; end
+
+% Mechanics Explorer: se abre o no según ver_mechanics (como InitFcn actúa sobre el modelo que simula)
+if exist('bdroot', 'file') && ~isempty(bdroot) && bdIsLoaded(bdroot) && ...
+        any(strcmp(bdroot, {'Model_aaron', 'Model_aaronC'}))
+    set_param(bdroot, 'SimMechanicsOpenEditorOnUpdate', char(["off", "on"](ver_mechanics + 1)));
+end
 clear here_ q_
