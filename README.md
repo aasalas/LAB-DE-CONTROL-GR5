@@ -4,6 +4,18 @@ Plataforma de nivelación **MARLUP** (roll, pitch y heave) con tres actuadores
 hidráulicos. Curso Laboratorio de Control, Instituto Tecnológico de Costa Rica.
 Aarón Salas Alvarado, Mónica Solís Murillo, Eduardo Valle Arriola.
 
+## Estado actual (13 nov 2026)
+
+| | |
+|---|---|
+| Controlador | **Un solo PI en todo el proyecto: Kp = 20, Ki = 1**, Ts = 10 ms, en `ctrl_pi.slx` (un pistón) y `ctrl_pi3.slx` (los tres). Lazo de nivelación **K = 15**, con saturación de ±0.6 rad |
+| Requisito | Inclinación de la mesa **≤ 1°** en roll y pitch con oleaje de **Hs = 2 m**, Tp = 10 s |
+| Resultado | Pico de pitch de 2.88° sin compensar a **0.78°**; roll de 1.52° a 0.42°. El PiL en el Arduino coincide con el MiL (error nulo) |
+| Informe del Avance 3 | [`DOCS/AVANCES/AVANCE 3/informe_avance3.pdf`](DOCS/AVANCES/AVANCE%203/informe_avance3.pdf) |
+| Diseño del PI | [`MODELOS/PISTON/MODELO_MATEMATICO.md`](MODELOS/PISTON/MODELO_MATEMATICO.md) y `MODELOS/PISTON/diseno_pi.m` |
+| Experimentos y decisiones | [`MODELOS/CINEMATICA/BITACORA.md`](MODELOS/CINEMATICA/BITACORA.md) |
+| Cómo correrlo | Sección *PiL de la plataforma completa (3 pistones)*, más abajo |
+
 ## Para el revisor: Actividad 3, Processor-in-the-Loop
 
 El modelo dinámico de **un** pistón hidráulico (cilindro Rexroth CDH1 40/28 + válvula
@@ -208,12 +220,15 @@ Detalle, datos y decisiones en [`MODELOS/CINEMATICA/BITACORA.md`](MODELOS/CINEMA
   PiL no ideal ± 0.001°); roll de 1.52° a 0.42°. El ruido se ve en el comando de las válvulas
   (0.012 RMS) pero cambia la inclinación en menos de 0.04°.
 
-### 13 nov 2026: plan del experimento 1 (factorial y barrido de K)
+### 13 nov 2026: experimento 1 (factorial y barrido de K)
 
-El plan, la duración estimada y luego los resultados están en
+Experimento previo al controlador único; plan, resultados y conclusiones en
 [`MODELOS/CINEMATICA/BITACORA.md`](MODELOS/CINEMATICA/BITACORA.md).
 
 ### 13 nov 2026: PiL con bloque Model sobre el Arduino
+
+> Los resultados de esta entrada son del primer controlador (Kp = 6.7, K = 20, Hs = 0.5 m,
+> requisito de 0.20°). Los vigentes están en *Estado actual* y en la entrada de arriba.
 
 - Se reemplazó el MATLAB Function que hablaba por serie con tramas propias (`pil_ctrl3`,
   `pil_arduino_3p`) por un **bloque Model en modo PIL** que referencia `ctrl_pi3.slx`, igual que el
@@ -273,7 +288,8 @@ está en `DOCS/INFORME_PIL`.
 CAD/                       Piezas y ensamble de SolidWorks
 DOCS/
 ├── ENUNCIADOS/            Enunciados de las actividades 1–3
-├── AVANCES/               Avances 1 y 2 (PDF), presentación del avance 1 y AVANCE 3/ (informe del PiL de 3 pistones)
+├── AVANCES/               Avances 1 y 2 (PDF), presentación del avance 1 y AVANCE 3/: informe del PiL de 3
+│                          pistones, figuras/ y resultados/ (los experimentos anteriores, en resultados/previos/)
 ├── INFORME_PIL/           Informe de la actividad 3 (.tex, .pdf y figuras/)
 ├── FIGS/                  Figuras de los avances 2 y 3 y referencias del CAD
 └── CERTIFICADOS/          Certificados de Simulink y Simscape
@@ -288,7 +304,6 @@ MODELOS/
 │   ├── correr_pil3.m          Corre el MiL o el PiL y mide la inclinación de la mesa
 │   ├── exp_corridas.m         Corre una tabla de corridas y guarda métricas tras cada una
 │   ├── exp2_final.m           Escenario final del informe (Hs = 2 m, K = 15; MiL y PiL)
-│   ├── exp1_etapa*.m          Experimentos previos (factorial y barridos con Hs = 0.5 m)
 │   └── iniciar_pil3.m, pil3_puerto.m, pil3_limpiar.m   Apoyo (los llama el modelo)
 └── PISTON/                Actividad 3
     ├── PiL.slx            Planta + sensor + bloque Model en modo PIL
