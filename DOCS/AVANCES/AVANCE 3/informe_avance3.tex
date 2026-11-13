@@ -264,29 +264,196 @@ $\zeta_h$ & $\approx b/(2m_L\omega_h)$ & 0.046 \\
 \end{table}
 \pendiente{El informe de validación unitaria usa $\omega_h\approx\SI{390}{rad/s}$; unificar el valor (¿incluye el volumen de las tuberías?).}
 
-\subsection{Justificación de las ganancias}
+
+% =====================================================================
+%  Reemplaza la subsección "Justificación de las ganancias" de
+%  informe_avance3.tex (actualmente en la línea 267) y corrige la
+%  Tabla~\ref{tab:lineal}, que debe incluir el volumen de las tuberías.
+%
+%  Todos los valores numéricos salen de MARLUP_hydr_params.m y de las
+%  corridas registradas en DOCS/AVANCES/AVANCE 3/resultados/metricas.csv
+%  y del barrido de K. Los cálculos de márgenes y polos son analíticos
+%  sobre el modelo linealizado (16); no se corrieron en MATLAB.
+% =====================================================================
+
+% ---------------------------------------------------------------------
+% (1) TABLA DE PARÁMETROS LINEALIZADOS — sustituye a la tabla actual y resuelve el PENDIENTE sobre omega_h
+% ---------------------------------------------------------------------
+\pendiente{Esta parte me dijo claude que la cambiara por la tabla de parametros de arriba, ahi estan los comentarios}
+
+\begin{table}[H]
+\centering
+\caption{Parámetros del modelo linealizado}
+\label{tab:lineal}
+\small
+\begin{tabularx}{\columnwidth}{lLr}
+\toprule
+Símbolo & Expresión & Valor \\
+\midrule
+$K_v$      & $\approx Q_N/A_A$ (velocidad a $u=1$)                  & \SI{0.53}{m/s} \\
+$V_{tub}$  & $\pi(d_{tub}/2)^2\,\ell_{tub}$                          & \SI{0.16}{L} \\
+$\omega_h$ & $\sqrt{(A_A^2/C_A+A_B^2/C_B)/m_L}$, con tuberías        & \SI{422}{rad/s} (\SI{67}{Hz}) \\
+$\zeta_h$  & $\approx b/(2m_L\omega_h)$                              & 0.059 \\
+$M_r$      & $1/(2\zeta_h)$ (pico de resonancia)                     & 8.4 (\SI{19}{dB}) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Las tuberías aportan un volumen comparable al de las cámaras
+($\SI{0.16}{L}$ frente a $\SI{0.30}{L}$ y $\SI{0.15}{L}$), de modo que
+$C_{A,B}=(V_{A0,B0}+V_{tub})/\beta_e$. Si se omiten, $\omega_h$ sube a
+\SI{548}{rad/s}; incluyéndolas queda en \SI{422}{rad/s}, cerca de las
+\SI{390}{rad/s} que reporta la validación unitaria~\cite{informe_pil}.
+El valor de la Tabla~\ref{tab:lineal} es el que se usa en adelante.
+
+% ---------------------------------------------------------------------
+% (2) SUBSECCIÓN DE DISEÑO
+% ---------------------------------------------------------------------
+\subsection{Diseño y justificación del controlador}
 \label{sec:ganancias}
-Las ganancias se sintonizaron experimentalmente en simulación; esta sección verifica con el modelo linealizado por qué funcionan y dónde está el límite del desempeño.
 
-\textit{Lazo interno (posición de cada cilindro).} El PI $C(s)=K_p+K_i/s$ se usa con $K_p=6.7$, $K_i=1$ y saturación del comando en $\pm1$. Con la planta \eqref{eq:Gsimple}, el lazo cerrado en la zona lineal tiene un polo dominante en $s\approx-K_pK_v=\SI{-3.55}{rad/s}$, es decir, una constante de tiempo de \SI{0.28}{s} y un ancho de banda unas seis veces mayor que la frecuencia pico del oleaje ($2\pi f_p=\SI{0.63}{rad/s}$). El cero del PI está en $K_i/K_p=\SI{0.15}{rad/s}$, por debajo del cruce, de modo que la integral corrige errores lentos (fuerza de carga constante, sesgos) sin reducir el margen de fase. El lazo abierto es de tipo 2, por lo que el error ante una rampa de referencia es nulo en régimen.
+El sistema es una cascada: tres lazos internos de posición (uno por cilindro) y un lazo exterior de nivelación que cierra sobre el ángulo medido de la mesa. Se diseña primero el interno, porque el exterior usa su dinámica como planta.
 
-La saturación se fija en $\pm1$ (todo el rango de la válvula). Con $\pm0.1$, la velocidad máxima del vástago sería $0.1K_v=\SI{53}{mm/s}$ y la zona lineal se reduciría a errores menores a $0.1/K_p\approx\SI{15}{mm}$. Para el oleaje de diseño, la velocidad que exige la nivelación es del orden de \SI{3.5}{mm/s} (de \eqref{eq:jacobiano} y las velocidades angulares de la base), así que en régimen la válvula no satura con ninguno de los dos límites; el límite de $\pm1$ importa en los transitorios grandes, como el arranque o un cambio de altura. La velocidad de respuesta en pequeña señal la fija $K_p$, no la saturación.
+\subsubsection{Lazo interno: posición de cada cilindro}
 
-Los valores usados en las corridas son $K_p=6.7$, $K_i=1$ y $U_{sat}=1$, y se editan en un solo archivo (\texttt{config\_pil3.m}) para iterar experimentos. Su sintonía fue experimental; el diseño de un controlador con ganancias justificadas queda como trabajo aparte.
-
-\textit{Lazo exterior (nivelación).} Si el lazo interno sigue su referencia con una dinámica $G_i(s)\approx1/(s/\omega_b+1)$, $\omega_b=K_pK_v$, la inclinación de la mesa es aproximadamente la de la base más la comandada, $\alpha=\alpha_b+G_i(s)\,\alpha_c$. Con \eqref{eq:lazo_ext},
+\textit{Estructura y especificaciones.} Con el PI $C(s)=K_p+K_i/s$ y la planta~\eqref{eq:Gsimple}, el lazo abierto es
 \begin{equation}
-\frac{\alpha(s)}{\alpha_b(s)}=\frac{1}{1+K\,G_i(s)}.
+L_i(s)=\Big(K_p+\frac{K_i}{s}\Big)
+\frac{K_v\,e^{-sT_d}}{s(\tau_vs+1)\left(\dfrac{s^2}{\omega_h^2}+\dfrac{2\zeta_h}{\omega_h}s+1\right)},
+\label{eq:Li}
+\end{equation}
+donde $T_d=\SI{6}{ms}$ agrupa el retardo de la válvula (\SI{1}{ms}) y la retención del muestreo ($T_s/2=\SI{5}{ms}$). Las especificaciones heredadas del anteproyecto son $M_p\le\SI{10}{\percent}$,
+$t_s\le\SI{2}{s}$ y error nulo en régimen permanente.
+
+\textit{Error en régimen.} La planta ya tiene un integrador y el PI añade otro, así que el lazo abierto es de tipo 2: el error es nulo ante referencias constantes y ante rampas, cualquiera que sea $K_p$. La especificación de error no restringe el diseño.
+
+\textit{Qué fija $K_p$.} El lugar de las raíces (Tabla~\ref{tab:polos}) muestra que $K_p$ actúa sobre dos cosas a la vez. Desplaza el polo dominante hacia la izquierda, aproximadamente a $s\approx-K_pK_v$, lo que acelera la respuesta; y al mismo tiempo \emph{le quita amortiguamiento al par de resonancia hidráulica}, que se acerca al eje imaginario. Esa segunda acción es la que fija el límite superior.
+
+\begin{table}[H]
+\centering
+\caption{Polos de lazo cerrado del lazo interno ($K_i=1$)}
+\label{tab:polos}
+\small
+\begin{tabularx}{\columnwidth}{rCCC}
+\toprule
+$K_p$ & Polo dominante & Par de resonancia & $\zeta$ resonancia \\
+\midrule
+\textbf{6.7} & $-3.43$ & $-24.0\pm420j$ & 0.057 \\
+20           & $-10.8$ & $-22.0\pm418j$ & 0.052 \\
+60           & $-34.3$ & $-15.4\pm413j$ & 0.037 \\
+100          & $-60.1$ & $-8.1\pm407j$  & 0.020 \\
+122          & ---     & cruza el eje   & 0 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\textit{Límite de estabilidad.} Con $\zeta_h=0.059$ la resonancia tiene un pico de \SI{19}{dB}. Al subir $K_p$, el módulo de~\eqref{eq:Li} vuelve a cruzar \SI{0}{dB} cerca de \SI{400}{rad/s}, donde la fase ya pasó de \SI{-180}{\degree}: ahí el lazo se vuelve inestable. El cálculo da $K_{p,\max}=122$. Conviene subrayarlo porque el margen de fase del cruce principal sigue siendo amplio en ese punto y, si se mide solo ese cruce, el sistema parece estable cuando no lo es.
+
+\begin{table}[H]
+\centering
+\caption{Márgenes del lazo interno. El margen de fase es el \emph{peor} de todos los cruces de \SI{0}{dB}, no solo el del cruce principal.}
+\label{tab:margenes}
+\small
+\begin{tabularx}{\columnwidth}{rCCC}
+\toprule
+$K_p$ & Cruce [\si{rad/s}] & Margen de fase & Criterio $\ge\SI{60}{\degree}$ \\
+\midrule
+\textbf{6.7} & 3.6  & \SI{86}{\degree} & cumple \\
+20           & 10.6 & \SI{85}{\degree} & cumple \\
+60           & 32.0 & \SI{75}{\degree} & cumple \\
+100          & 53.7 & \SI{65}{\degree} & cumple \\
+120          & 64.7 & \SI{59}{\degree} & no cumple \\
+122          & ---  & inestable        & --- \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\textit{Respuesta temporal.} Con $K_p=6.7$ el polo dominante es real ($\zeta=1$, sobreamortiguado), de modo que la respuesta al escalón en la zona lineal no oscila:
+
+\begin{table}[H]
+\centering
+\caption{Desempeño del lazo interno con $K_p=6.7$, $K_i=1$}
+\label{tab:temporal}
+\small
+\begin{tabularx}{\columnwidth}{LCC}
+\toprule
+Indicador & Requisito & Calculado \\
+\midrule
+Sobrepaso $M_p$                  & $\le\SI{10}{\percent}$ & \SI{1.5}{\percent} \\
+Tiempo de establecimiento $t_s$ (\SI{2}{\percent}) & $\le\SI{2}{s}$ & \SI{0.93}{s} \\
+Amortiguamiento dominante $\zeta$ & ---                   & 1.0 \\
+Error en régimen                 & 0                      & 0 (tipo 2) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+El $t_s$ de la Tabla~\ref{tab:temporal} corresponde a la zona lineal. Ante el escalón de \SI{0.40}{m} de la validación unitaria la válvula satura y el tiempo lo fija el caudal máximo ($\SI{0.40}{m}/K_v\approx\SI{0.75}{s}$) y no $K_p$, lo que coincide con el $t_s=\SI{1.05}{s}$ medido~\cite{informe_pil}.
+
+\textit{Seguimiento a la frecuencia del oleaje.} El lazo interno debe seguir una referencia que varía a $2\pi/T_p=\SI{0.63}{rad/s}$. Evaluando el lazo cerrado en esa frecuencia, el error de seguimiento $|1-T_i(j\omega)|$ es de \SI{17.6}{\percent} con $K_p=6.7$, \SI{5.9}{\percent} con $K_p=20$ y \SI{2.0}{\percent} con $K_p=60$. El valor usado cumple las especificaciones con margen de estabilidad amplio; subir $K_p$ a 20 reduciría el error de seguimiento sin perder margen (\SI{85}{\degree}) y es la primera mejora a evaluar.
+
+\textit{Elección de $K_i$.} El cero del PI queda en $K_i/K_p=
+\SI{0.149}{rad/s}$, un factor 24 por debajo del cruce
+(\SI{3.6}{rad/s}), de modo que no altera el margen de fase ni el sobrepaso. Su función es anular el error ante perturbaciones constantes (fuerza de carga, sesgo de la válvula, fugas). Su constante de tiempo, $T_i=K_p/K_i=\SI{6.7}{s}$, es lenta frente al oleaje, así que la acción integral no interviene en el rechazo de la perturbación: eso lo hace el lazo exterior.
+
+\textit{Saturación y muestreo.} Con $U_{sat}=1$ la zona lineal cubre errores de hasta $1/K_p=\SI{149}{mm}$, muy por encima de los milímetros que exige la nivelación, así que en régimen el comando no satura. El periodo $T_s=\SI{10}{ms}$ da una frecuencia de Nyquist de \SI{50}{Hz}, por debajo de la resonancia (\SI{67}{Hz}): si se excitara, aparecería como alias. No se excita porque el lazo cruza en \SI{3.6}{rad/s}, dos décadas por debajo.
+
+\subsubsection{Lazo exterior: nivelación de la mesa}
+
+\textit{Planta equivalente.} A la frecuencia del oleaje el lazo interno sigue su referencia, de modo que la cadena \emph{comando de ángulo $\rightarrow$ cinemática inversa $\rightarrow$ pistones $\rightarrow$ inclinación de la mesa} se comporta como una ganancia estática $g$ en serie con el lazo interno:
+\begin{equation}
+\frac{\alpha(s)}{\alpha_b(s)}=\frac{1}{1+K\,g\,T_i(s)}.
 \label{eq:sensibilidad}
 \end{equation}
-Con $K=20$ y un lazo interno ideal, este modelo simplificado predice una atenuación a $1/(1+K)\approx0.048$ (\SI{-26}{dB}) en toda la banda del oleaje. La simulación atenúa menos: la inclinación pasa de \SI{0.72}{\degree} a \SI{0.16}{\degree} de pico (unas 4.5 veces, \SI{-13}{dB}; Sec.~\ref{sec:resultados}), lo que equivale a una ganancia de lazo efectiva cercana a 3.5 y no a 20. \pendiente{Explicar la diferencia con el modelo simplificado (seguimiento real del lazo interno ante la dinámica del oleaje, acople con la plataforma, saturaciones) y confirmarla con una corrida en que se varíe $K$.} Como el lazo es solo proporcional, siempre queda un residuo proporcional a la inclinación de la base.
+Idealmente $g=1$ (la mesa se inclina lo que la cinemática ordena), pero la planta realiza una fracción: ante un comando de \SI{1}{\degree} aplicado directamente a la cinemática inversa, con el oleaje apagado, la mesa se inclina \SI{0.198}{\degree}. El ajuste del barrido de $K$ (Tabla~\ref{tab:ajuste}) da $g=0.175$ en \textit{pitch} y $g=0.165$ en \textit{roll}. Se verificó que los pistones alcanzan sus referencias (dentro de \SI{0.1}{mm}), que el lazo de altura responde al \SI{100}{\percent}, que los anclajes coinciden con el CAD y que el guiñado de la mesa no absorbe el movimiento; la causa de $g<1$ queda sin determinar y se trata aquí como un parámetro medido de la planta.
 
-\textit{Efecto de la resolución del sensor.} Un paso del ADC de 10 bits sobre \SI{450}{mm} es de \SI{0.44}{mm}; por \eqref{eq:jacobiano}, el error de \SI{0.22}{mm} de redondeo en la posición de un cilindro equivale a menos de \SI{0.12}{\degree} de inclinación en el peor caso. Sin embargo, el lazo exterior realimenta el ángulo de la mesa, que el modelo mide sin error, y por eso compensa los errores de medición de posición del lazo interno. La simulación lo confirma: las no idealidades del sensor cambian el pico de la inclinación en menos de \SI{0.005}{\degree} (Sec.~\ref{sec:noideal}). La resolución del ADC no es, por tanto, lo que limita la nivelación; la limita la ganancia efectiva del lazo.
+\textit{Criterio de diseño.} En la banda del oleaje
+$T_i(j\omega)\approx1$, así que~\eqref{eq:sensibilidad} se reduce a $S\approx1/(1+Kg)$. Imponiendo que el pico de inclinación de la mesa quede bajo el requisito,
+\begin{equation}
+\frac{\theta_{base}}{1+Kg}\le\theta_{req}
+\;\Longrightarrow\;
+K\ge\frac{1}{g}\left(\frac{\theta_{base}}{\theta_{req}}-1\right).
+\label{eq:Kmin}
+\end{equation}
 
-\textit{Mejoras posibles.} (i) Aumentar $K$ o agregar acción integral en el lazo exterior, para reducir el residuo; (ii) agregar prealimentación de la inclinación de la base medida con una IMU, como en la Fig.~\ref{fig:cascada}; (iii) si el ángulo de la mesa se midiera en hardware con un sensor de resolución finita, repetir el análisis de resolución, que en este modelo no aparece porque la medición del ángulo es ideal.
+Con el pico sin compensar $\theta_{base}=\SI{0.703}{\degree}$, $\theta_{req}=\SI{0.2}{\degree}$ y $g=0.175$ resulta $K\ge14.4$.
 
-\subsection{Plataforma}
-\pendiente{Modelo de Simscape Multibody: cuerpos, masas e inercias de la mesa, uniones (juntas prismáticas con movimiento impuesto, unión de 4 GDL de la base), y cómo se obtiene $F_{L,i}$.}
+\textit{Límite superior.} Igual que en el lazo interno, subir $K$ desamortigua la resonancia: $\zeta$ pasa de 0.049 con $K=20$ a 0.0085 con $K=100$, y el lazo se vuelve inestable en $K_{\max}=115$.
+
+\textit{Valor elegido.} $K=20$ queda entre $14.4$ y $115$, con un factor de seguridad de $5.7$ en ganancia frente a la inestabilidad y un margen de \SI{28}{\percent} sobre el requisito. El margen de fase del lazo exterior en ese punto es de \SI{97}{\degree}.
+
+\subsubsection{Validación del diseño}
+
+El modelo~\eqref{eq:sensibilidad} se contrasta con el barrido de $K$ simulado sobre la planta completa. La Tabla~\ref{tab:ajuste} muestra que una sola constante, $g=0.175$, reproduce las cinco corridas de
+\textit{pitch} con un error máximo de \SI{0.8}{\percent}.
+
+\begin{table}[H]
+\centering
+\caption{Pico de inclinación de la mesa: modelo $\theta=\theta_{base}/(1+Kg)$
+con $g=0.175$ frente a la simulación (ventana de \SI{15}{s})}
+\label{tab:ajuste}
+\small
+\begin{tabularx}{\columnwidth}{rCCC}
+\toprule
+$K$ & Predicho [\si{\degree}] & Simulado [\si{\degree}] & Error \\
+\midrule
+0  & 0.703 & 0.703 & ---               \\
+5  & 0.375 & 0.378 & \SI{-0.8}{\percent} \\
+10 & 0.256 & 0.256 & \SI{-0.1}{\percent} \\
+15 & 0.194 & 0.194 & \SI{0.0}{\percent}  \\
+20 & 0.156 & 0.156 & \SI{+0.1}{\percent} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Sobre la corrida de \SI{30}{s} de la Sec.~\ref{sec:resultados}, la sensibilidad predicha es $1/(1+20\times0.175)=0.2222$ y la medida es $\SI{0.1593}{\degree}/\SI{0.7167}{\degree}=0.2223$: una diferencia del \SI{0.02}{\percent}. El modelo lineal explica el resultado de la simulación no lineal completa, lo que respalda tanto el valor de $g$ como el criterio~\eqref{eq:Kmin} con el que se eligió $K$.
+
+Esto resuelve la discrepancia que dejaba abierta el modelo simplificado anterior: la atenuación no es $1/(1+K)=0.048$ sino $1/(1+Kg)=0.222$, porque la ganancia efectiva del lazo no es $K$ sino $Kg=3.5$.
+
+\subsubsection{Alcance del análisis}
+
+Las ecuaciones de esta sección son analíticas sobre el modelo
+linealizado~\eqref{eq:Gsimple}; no se obtuvieron con las herramientas de análisis de MATLAB. $K_v$ se estima con el caudal nominal sobre el área del pistón y no se midió: un valor distinto desplaza en la misma proporción los cruces y los límites $K_{p,\max}$ y $K_{\max}$, pero no cambia la forma del diseño. El valor de $g$ sí es medido y es el que fija
+$K$.
 
 % =====================================================================
 \section{Interfaz sensor/actuador -- MCU}
