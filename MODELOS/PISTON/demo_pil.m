@@ -14,6 +14,7 @@ en = casos.(caso);
 
 % parametros de la planta y del sensor en el workspace base (los lee el modelo)
 evalin('base', sprintf('run(''%s'')', fullfile(here, '..', 'CINEMATICA', 'MARLUP_hydr_params.m')));
+evalin('base', 'cyl.x_init = 0;');   % el escalon parte de 0 (el modelo de 3 pistones usa 0.23)
 q = 0.45/1024;                                         % ADC de 10 bits sobre 450 mm
 sens = struct('bias', 0.09e-3*en(1), 'backlash', 0.004e-3*en(2), 'q', 1e-12, 'xmin', -inf, 'xmax', inf);
 if en(3), sens.q = q; sens.xmin = 0; sens.xmax = 1023*q; end

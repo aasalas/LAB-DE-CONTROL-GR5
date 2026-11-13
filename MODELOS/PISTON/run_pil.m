@@ -7,6 +7,7 @@
 here = fileparts(mfilename('fullpath'));
 cd(here);
 run(fullfile(here, '..', 'CINEMATICA', 'MARLUP_hydr_params.m'));
+cyl.x_init = 0;   % el escalon de la validacion unitaria parte de 0 (el modelo de 3 pistones usa 0.23)
 if ~exist('PIL_PORT', 'var'), pil_puerto; else, pil_puerto(PIL_PORT); end
 m = 'PiL'; load_system(m);
 outd = 'resultados'; figd = 'figuras';
