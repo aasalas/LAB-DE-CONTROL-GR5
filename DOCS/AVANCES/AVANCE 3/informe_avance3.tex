@@ -91,8 +91,8 @@ La Fig.~\ref{fig:cascada} resume el sistema. El oleaje mueve la base en \textit{
 
 \begin{figure*}[t]
 \centering
-\includegraphics[width=0.85\textwidth]{fig3_cascada_marlup.png}
-\caption{Estructura en cascada de MARLUP: prealimentación del movimiento de la base, cinemática inversa, tres lazos de posición y plataforma. A la prealimentación se suma un lazo de realimentación sobre el ángulo medido de la mesa (Sec.~\ref{sec:ganancias}). \pendiente{actualizar en la figura $H_s=\SI{2}{m}$ y el lazo de realimentación con $K$.}}
+\includegraphics[width=\textwidth]{fig3_cascada.pdf}
+\caption{Estructura en cascada de MARLUP con el controlador final: la inclinación de la base, medida por un IMU, se prealimenta con $-K_{ff}$, y el ángulo medido de la mesa se realimenta con la ganancia $K$ (Sec.~\ref{sec:ganancias}); el comando saturado pasa por la cinemática inversa a los tres lazos PI de posición, que se ejecutan en el Arduino, y la plataforma devuelve a cada actuador su fuerza de carga $F_{L,i}$. Generada con \texttt{figuras/fig3\_cascada.tex}.}
 \label{fig:cascada}
 \end{figure*}
 
