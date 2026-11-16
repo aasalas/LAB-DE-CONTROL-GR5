@@ -5,7 +5,7 @@ function fig_cinematica(alpha_deg, theta_deg)
 % (a) Marcos: base {0}, mesa {P}, anclajes inferiores {B_j} y superiores {A_j}, en la pose nominal.
 % (b) Construcción vectorial de la pata 1 en la pose inclinada: d_1 = p_1 - b_1, L_1 = ||d_1||.
 % Usa la geometría y la ecuación de la MATLAB Function marlup_ik (INVERSE KINEMATICS):
-%   T_0^P = Trasl(0,0,z) Ry(theta) Rx(alpha),   L_j = || R p_j^P + z k - b_j ||.
+%   T_0^P = Ry(theta) Rx(alpha) Trasl(0,0,z),   L_j = || R (p_j^P + z k) - b_j ||.
 % Escribe cinematica.pdf y cinematica.png junto a este archivo.
 if nargin < 1, alpha_deg = 10; end
 if nargin < 2, theta_deg = -8; end
@@ -78,12 +78,13 @@ fprintf('L = [%.4f %.4f %.4f] m, L0 = %.4f m\n', L, sqrt((R_B - R_T)^2 + Z0^2));
 end
 
 function [b, p, Rm, o, L] = pose(al, th, z, R_B, R_T, PHI)
-% Misma cinemática que marlup_ik: R = Ry(theta) Rx(alpha), origen de {P} en (0,0,z)
+% Misma cinemática que marlup_ik: T = Ry(theta) Rx(alpha) Trasl(0,0,z); la mesa gira sobre el
+% centro de la base, así que su origen es R*(0,0,z)
 ca = cos(al); sa = sin(al); ct = cos(th); st = sin(th);
 Rm = [ct sa*st ca*st; 0 ca -sa; -st sa*ct ca*ct];
-o = [0; 0; z];
+o = Rm*[0; 0; z];
 b = R_B*[cos(PHI); sin(PHI); zeros(1, 3)];
-p = Rm*(R_T*[cos(PHI); sin(PHI); zeros(1, 3)]) + o;
+p = Rm*(R_T*[cos(PHI); sin(PHI); zeros(1, 3)] + [0; 0; z]);
 L = sqrt(sum((p - b).^2, 1));
 end
 
