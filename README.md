@@ -131,8 +131,10 @@ cinemática inversa, tres actuadores hidráulicos y la plataforma en Simscape Mu
 tres controladores PI en **un solo** bloque Model en modo PIL, que referencia `ctrl_pi3.slx`.
 `Model_aaron.slx` es el mismo modelo con ese bloque en modo Normal (MiL).
 
-En el nivel principal del modelo, `Interfaz sensor` agrega las no idealidades y convierte a
-`single`, `Controlador` es el bloque PIL, e `Interfaz actuador` reparte el comando a los pistones.
+En el nivel principal del modelo, `Linear encoder` está en la realimentación y agrega las no
+idealidades a la posición medida de cada pistón (sesgo, histéresis, ruido, ADC y rango);
+`Interfaz MCU` muestrea a 10 ms y convierte a `single`, `Controlador` es el bloque PIL, e
+`Interfaz actuador` reparte el comando a los pistones.
 
 ### Cómo correr el experimento
 
