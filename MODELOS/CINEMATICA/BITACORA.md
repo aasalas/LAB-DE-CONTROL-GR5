@@ -3,6 +3,33 @@
 Planes y resultados de los experimentos con `Model_aaron.slx` (MiL) y `Model_aaronC.slx` (PiL).
 Más reciente primero. El historial general del PiL está en la *Bitácora* del `README.md` de la raíz.
 
+## 16 nov 2026 (tarde): cinemática inversa corregida, g = 1, K = 3
+
+**Decisión de Aarón:** el objetivo es g = 1. Se corrigió `marlup_ik` en ambos modelos:
+`d = R*(pP + [0; 0; z]) - b` (T = Ry·Rx·Trasl(0,0,z), la mesa gira sobre el centro de la base).
+Medido con un escalón de 1° y mar plano sobre el modelo guardado: **g_roll = 1.007, g_pitch = 1.003**
+(antes 0.191 y 0.188). La saturación del comando de ángulo bajó de ±0.6 a **±0.3 rad** (17° reales,
+dentro de la carrera de ±220 mm).
+
+Barrido de K con g = 1 (`exp4_k_ik.m`, MiL, Hs = 2 m, Tp = 10 s):
+
+| K | 0 | 2.8 | 4 | 6 | 9 | 15 |
+|---|---|---|---|---|---|---|
+| Pico pitch (°) | 2.88 | 0.77 | 0.59 | 21.4 (inestable) | 28.1 (inestable) | 28.2 (inestable) |
+| Atenuación pitch (dB) | 0 | −11.5 | −13.9 | — | — | — |
+
+K = 2.8 reproduce el resultado anterior (K = 15 con g = 0.188): el modelo es consistente. El límite de
+estabilidad del lazo exterior está entre K = 4 y 6 y no depende de la cinemática. Con g = 1, K = 15
+es inestable, así que **se fijó K = 3** (margen de 2× hasta K = 6; Kp = 20 y Ki = 1 sin cambios).
+
+| Caso K = 3 (Hs = 2 m, Tp = 10 s) | Pico pitch (°) | RMS pitch (°) | Pico roll (°) | RMS roll (°) |
+|---|---|---|---|---|
+| MiL | 0.735 | 0.362 | 0.383 | 0.140 |
+| PiL no ideal (5 LSB) | 0.786 | 0.358 | 0.512 | 0.148 |
+
+**Pendiente:** rehacer `exp2_final` y `exp3_oleaje` con K = 3 y actualizar el informe del Avance 3,
+que todavía describe la cinemática anterior (K = 15, g = 0.188).
+
 ## 16 nov 2026: encoder en la realimentación, ruido de 5 LSB, oleajes de 5°, 10° y 15° y causa de g
 
 **Encoder lineal.** Las no idealidades ya actuaban sobre la medición (el error se calcula dentro de
