@@ -3,6 +3,46 @@
 Planes y resultados de los experimentos con `Model_aaron.slx` (MiL) y `Model_aaronC.slx` (PiL).
 Más reciente primero. El historial general del PiL está en la *Bitácora* del `README.md` de la raíz.
 
+## 16 nov 2026: encoder en la realimentación, ruido de 5 LSB, oleajes de 5°, 10° y 15° y causa de g
+
+**Encoder lineal.** Las no idealidades ya actuaban sobre la medición (el error se calcula dentro de
+`ctrl_pi3`), pero estaban en `Interfaz sensor`, junto al camino de la referencia. Pasaron a un
+subsistema **`Linear encoder`** entre cada pistón y la interfaz, que ahora se llama **`Interfaz MCU`**
+(solo ZOH a 10 ms y `single`). El MiL ideal reproduce el escenario final (pitch 0.784°). El ruido
+subió de 1 a **5 LSB (σ = 2.2 mm)**, porque con 1 LSB la diferencia en la mesa era de 0.0075° RMS.
+
+Escenario final con el ruido nuevo (Hs = 2 m, Tp = 10 s, K = 15; `fig_final.m`):
+
+| Caso | Pico pitch (°) | RMS pitch (°) | Pico roll (°) | RMS roll (°) | u_RMS máx |
+|---|---|---|---|---|---|
+| PiL ideal (= MiL) | 0.784 | 0.382 | 0.418 | 0.149 | 0.032 |
+| PiL no ideal (5 LSB) | 0.823 | 0.376 | 0.534 | 0.154 | 0.066 |
+
+PiL no ideal − PiL ideal: 0.042° RMS (0.145° máx) en pitch y 0.041° RMS (0.157° máx) en roll.
+Ruido en el comando de las válvulas: 0.058 RMS (0.24 máx), ≈ Kp·σ = 0.044 más la cuantización.
+
+**Oleajes más agresivos (`exp3_oleaje.m`, `fig_oleaje.m`).** La pendiente crece como Hs/Tp². Con
+Hs = 2 m y la función del bloque P-M evaluada fuera de Simulink se eligieron Tp = 7.5, 5.3 y 4.3 s
+(picos de 5.1°, 10.1° y 15.2° en la base). Tp configurable en `correr_pil3(..., 'Tp', x)`.
+
+| Tp (s) | Sin compensar | MiL K = 15 | PiL no ideal K = 15 | Válvulas saturadas |
+|---|---|---|---|---|
+| 7.5 | 5.11° | 1.46° | 1.47° | 0 % |
+| 5.3 | 10.14° | 16.63° | 15.13° | 11–12 % |
+| 4.3 | 15.15° | 19.97° | 24.58° | 18–29 % |
+
+Con 5° la atenuación es la de siempre (−11.2 dB) pero no se cumple 1°. Con 10° y 15° el lazo pierde
+la nivelación: el comando de ángulo se satura en ±0.6 rad (= 6.5° reales con g = 0.188) y las
+válvulas saturan. El controlador cumple hasta ~3.7° de base.
+
+**Causa de g (análisis de Fable sobre el XML del ensamble, sin simulación).** La unión superior de cada
+pata es un único pasador tangencial (`Garra i/Rigid Transform3` suelda la cruceta), así que la mesa
+gira alrededor del centro de la base y no de su centro, como supone `marlup_ik`:
+**g = R_TOP/R_BASE = 0.143/0.7608 = 0.188**. Predice la atenuación medida para K = 5…20 con error
+< 0.2 dB, el 18 % del Avance 2 y el Bias de pitch del sensor. Corrección posible en `marlup_ik`:
+`d = R*(pP + [0; 0; z]) - b` (g ≈ 1), pero con K = 15 la ganancia de lazo pasaría de 2.8 a 15
+(inestable según K = 30): exigiría K ≈ 2.8 y saturación ≈ ±0.3 rad. **Pendiente de decisión de Aarón.**
+
 ## 13 nov 2026: controlador único, requisito de 1° y escenario final (cerrado)
 
 **Decisiones de Aarón:** un solo controlador de aquí en adelante, en todo el proyecto

@@ -9,12 +9,14 @@ Kp   = 20;      % ganancia proporcional [1/m]: u = Kp*e, e en metros
 Ki   = 1;       % ganancia integral [1/(m*s)]
 Usat = 1;       % saturación del comando de la válvula: u en [-Usat, Usat] (1 = 100 %)
 
-%% No idealidades del sensor de posición de cada cilindro (1 = activa, 0 = ideal)
+%% No idealidades del encoder lineal de cada cilindro (bloque "Linear encoder", en la realimentación)
+% 1 = activa, 0 = ideal. La "Interfaz MCU" solo muestrea (10 ms) y convierte a single.
 en_lin  = 0;    % error de linealidad: sesgo de 0.09 mm (peor caso)
 en_hist = 0;    % histéresis: backlash de 0.004 mm
 en_q    = 0;    % ADC de 10 bits sobre 450 mm: paso de 0.44 mm
 en_ruido = 0;   % ruido eléctrico en la entrada analógica, independiente en cada pistón
-ruido_mm = 0.44;% desviación estándar del ruido [mm]: 1 LSB del ADC (exactitud del ATmega328P: ±2 LSB)
+ruido_mm = 2.2; % desviación estándar del ruido [mm]: 5 LSB del ADC (antes 1 LSB, 0.44 mm, que en
+                % la inclinación de la mesa no se distinguía sin zoom)
 
 %% Visualización
 ver_mechanics = 0;   % 1 = abre Mechanics Explorer (animación 3D) al simular; 0 = solo los scopes
