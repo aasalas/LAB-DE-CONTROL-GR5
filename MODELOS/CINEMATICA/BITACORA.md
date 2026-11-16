@@ -3,6 +3,34 @@
 Planes y resultados de los experimentos con `Model_aaron.slx` (MiL) y `Model_aaronC.slx` (PiL).
 Más reciente primero. El historial general del PiL está en la *Bitácora* del `README.md` de la raíz.
 
+## 16 nov 2026 (noche): prealimentación de la base, controlador final
+
+**Decisión de Aarón:** volver a su esquema original (Fig. 3 del informe): la mesa recibe el ángulo
+contrario al de la base, medido por un IMU en la base. Con g = 0.188 no podía funcionar; con g = 1 sí.
+Ley final: `θ_c = sat±0.3(−Kff·θ_b + K·(0 − θ))`, con **Kff = 1, K = 3**, Kp = 20, Ki = 1. Un ajuste
+con K = 0 confirma que la mesa reproduce la base con ganancia 1.02 (roll) y 0.99 (pitch).
+
+Hs = 2 m, Tp = 10 s (`exp5_prealimentacion.m`, `exp6_final_ff.m`, `fig_final.m`):
+
+| Caso | Pico pitch (°) | RMS pitch (°) | Pico roll (°) | Aten. pitch (dB) |
+|---|---|---|---|---|
+| Sin compensar | 2.878 | 1.434 | 1.522 | 0 |
+| Solo realimentación, K = 3 | 0.735 | 0.362 | 0.383 | −12.0 |
+| Final, MiL = PiL ideal | 0.128 | 0.054 | 0.060 | −28.4 |
+| Final, PiL no ideal (5 LSB) | 0.250 | 0.066 | 0.186 | −26.7 |
+
+Oleajes agresivos (MiL salvo indicación; `fig_oleaje.m`):
+
+| Tp (s) | Base | Solo realim. | Final MiL | Final PiL no ideal | Sat. válvulas (final) |
+|---|---|---|---|---|---|
+| 7.5 | 5.1° | 1.34° | 0.32° | 0.59° (roll 0.81°) | 0 % |
+| 5.3 | 10.1° | 23.9° | 28.6° | Simscape se detiene en t = 12.7 s | 48 % |
+| 4.3 | 15.2° | 35.2° | 23.7° | Simscape se detiene en t = 11.3 s | 72 % |
+
+**Límite físico, no de control:** seguir la base exige mover los cilindros a 0.06 / 0.13 / 0.38 / 0.70 m/s
+(bases de 3 / 5 / 10 / 15°), con elongaciones de hasta 39 / 70 / 139 / 207 mm. A válvula abierta
+llegan a 0.43 m/s extendiendo y 0.29 m/s retrayendo. Para 10° y 15° haría falta más caudal.
+
 ## 16 nov 2026 (tarde): cinemática inversa corregida, g = 1, K = 3
 
 **Decisión de Aarón:** el objetivo es g = 1. Se corrigió `marlup_ik` en ambos modelos:
