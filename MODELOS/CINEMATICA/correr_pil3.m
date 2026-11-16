@@ -5,13 +5,13 @@ function res = correr_pil3(modo, varargin)
 %   correr_pil3('pil', 'Puerto', "COM8")
 %   correr_pil3('mil', 'K', 10, 'Hs', 1, 'Tp', 5.3, 'Tsim', 30)
 %   correr_pil3('pil', 'NoIdeal', [1 1 1 1])            sensor no ideal, sin editar archivos
-% Opciones: K (lazo de nivelación, 15), Hs (altura significativa, 2 m), Tp (periodo pico, 10 s), Tsim (30 s),
+% Opciones: K (lazo de nivelación, 3), Hs (altura significativa, 2 m), Tp (periodo pico, 10 s), Tsim (30 s),
 %   TIni (2 s, se ignora el arranque), Puerto (último disponible), Figura (true),
 %   Kp, Ki, Usat y NoIdeal = [lin hist q ruido] (por defecto los de config_pil3.m).
 % Las ganancias del PI y las no idealidades se editan en config_pil3.m.
 % Devuelve las inclinaciones pico y RMS de la mesa [grados], u_rms y sat_pct (por válvula) y las señales.
 p = inputParser;
-addParameter(p, 'K', 15); addParameter(p, 'Hs', 2); addParameter(p, 'Tp', 10); addParameter(p, 'Tsim', 30);
+addParameter(p, 'K', 3); addParameter(p, 'Hs', 2); addParameter(p, 'Tp', 10); addParameter(p, 'Tsim', 30);
 addParameter(p, 'TIni', 2); addParameter(p, 'Puerto', []); addParameter(p, 'Figura', true);
 addParameter(p, 'Kp', []); addParameter(p, 'Ki', []); addParameter(p, 'Usat', []); addParameter(p, 'NoIdeal', []);
 parse(p, varargin{:}); o = p.Results;
