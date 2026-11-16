@@ -32,7 +32,9 @@ for i = 1:height(corridas)
         r.res = res; r.estable = true;
     catch err
         % errores de código (no de la simulación) detienen el lote: no son corridas inestables
-        if contains(err.identifier, 'UndefinedFunction') || contains(err.message, 'File:'), rethrow(err); end
+        % la ola inviable (correr_pil3:ola) también detiene el lote: no se lanza una corrida que se interrumpiría
+        if contains(err.identifier, 'UndefinedFunction') || contains(err.message, 'File:') || ...
+                strcmp(err.identifier, 'correr_pil3:ola'), rethrow(err); end
         r.error = err.message; fprintf(2, 'FALLÓ: %s\n', err.message);
     end
     r.t_sim_s = toc(t0);

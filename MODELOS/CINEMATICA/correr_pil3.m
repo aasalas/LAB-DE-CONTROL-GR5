@@ -7,14 +7,25 @@ function res = correr_pil3(modo, varargin)
 %   correr_pil3('pil', 'NoIdeal', [1 1 1 1])            sensor no ideal, sin editar archivos
 % Opciones: K (lazo de nivelación, 3), Hs (altura significativa, 2 m), Tp (periodo pico, 10 s), Tsim (30 s),
 %   TIni (2 s, se ignora el arranque), Puerto (último disponible), Figura (true),
-%   Kp, Ki, Usat, Kff (prealimentación, solo MiL) y NoIdeal = [lin hist q ruido] (por defecto los de config_pil3.m).
+%   Kp, Ki, Usat, Kff (prealimentación) y NoIdeal = [lin hist q ruido] (por defecto los de config_pil3.m).
 % Las ganancias del PI y las no idealidades se editan en config_pil3.m.
+% Antes de simular verifica con ola_exigencia que los cilindros puedan seguir la ola (velocidad y
+% carrera <= 95 % de 0.29 m/s y 220 mm); si no, no simula y da el error 'correr_pil3:ola'.
 % Devuelve las inclinaciones pico y RMS de la mesa [grados], u_rms y sat_pct (por válvula) y las señales.
 p = inputParser;
 addParameter(p, 'K', 3); addParameter(p, 'Hs', 2); addParameter(p, 'Tp', 10); addParameter(p, 'Tsim', 30);
 addParameter(p, 'TIni', 2); addParameter(p, 'Puerto', []); addParameter(p, 'Figura', true);
 addParameter(p, 'Kp', []); addParameter(p, 'Ki', []); addParameter(p, 'Kff', []); addParameter(p, 'Usat', []); addParameter(p, 'NoIdeal', []);
 parse(p, varargin{:}); o = p.Results;
+
+% Verificación previa: una ola que los cilindros no pueden seguir lleva a Simscape a detenerse
+V_MAX = 0.29; CARRERA = 0.22; MARGEN = 0.95;   % retracción a válvula abierta [m/s] y carrera libre [m]
+[vm, ca, bs] = ola_exigencia(o.Hs, o.Tp, o.Tsim);
+if vm > MARGEN*V_MAX || ca > MARGEN*CARRERA
+    error('correr_pil3:ola', ['La ola (Hs = %g m, Tp = %g s, base de %.1f°) pide %.2f m/s y %.0f mm a los ' ...
+        'cilindros; el límite es %.0f %% de %.2f m/s y %.0f mm. No se simula.'], ...
+        o.Hs, o.Tp, bs, vm, 1000*ca, 100*MARGEN, V_MAX, 1000*CARRERA);
+end
 
 % Sobrescrituras de config_pil3.m: las lee config_pil3 desde el workspace base
 ovr = struct();
