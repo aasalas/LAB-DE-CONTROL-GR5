@@ -26,6 +26,10 @@ ver_mechanics = 0;   % 1 = abre Mechanics Explorer (animación 3D) al simular; 0
 %  (roll y pitch), con saturación de ±0.3 rad. Gain2 = 0 deja el lazo de heave apagado.
 %  Hasta el 16-11-2026 era K = 15 con ±0.6 rad, pero la cinemática inversa hacía que la mesa
 %  girara solo g = 0.188 del ángulo pedido (K = 15 equivalía a K = 2.8 con g = 1).
+%% Prealimentación de la inclinación de la base (solo Model_aaron, MiL): 1 = activa, 0 = apagada.
+%  Se suma -Kff*[roll; pitch] de la base al comando del lazo de nivelación (un IMU en la base).
+Kff = 1;
+
 %% Oleaje: Hs = 2 m (estado de mar 4) en P-M SPECTRUM/Constant1, Tp = 10 s. Con Hs = 0.5 m la base
 %  apenas se inclinaba 0.7°, por el recorte direccional del bloque; el requisito es 1° en la mesa.
 

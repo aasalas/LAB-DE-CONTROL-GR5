@@ -2,7 +2,7 @@ function T = exp_corridas(corridas, archivo, varargin)
 % EXP_CORRIDAS  Ejecuta una tabla de corridas de correr_pil3 y guarda las métricas tras cada una.
 %   T = exp_corridas(corridas, 'exp2_final', 'Hs', 2)      (ver exp2_final.m)
 % corridas: tabla con columnas id (string), modo ('mil'|'pil'), K, Kp, Ki, Usat y, opcional,
-%   noideal (fila [lin hist q ruido]; por defecto sensor ideal).
+%   noideal (fila [lin hist q ruido]; por defecto sensor ideal) y Kff (prealimentación; por defecto 0).
 % Guarda DOCS/AVANCES/AVANCE 3/resultados/<archivo>.mat (con las señales) y .csv (métricas).
 % Si <archivo>.mat ya existe, omite las corridas hechas (se puede reanudar tras una falla).
 % Opciones (nombre, valor): 'TMax' (600 s: corte de una corrida, informativo), 'Tsim' (30), 'Hs' (2), 'Tp' (10).
@@ -23,10 +23,12 @@ for i = 1:height(corridas)
     r = struct('id', id, 'modo', char(c.modo), 'K', c.K, 'Kp', c.Kp, 'Ki', c.Ki, 'Usat', c.Usat, 'estable', false);
     ni = [0 0 0 0]; if any(strcmp(corridas.Properties.VariableNames, 'noideal')), ni = c.noideal; end   % [lin hist q ruido]
     r.noideal = ni;
+    kff = 0; if any(strcmp(corridas.Properties.VariableNames, 'Kff')), kff = c.Kff; end   % prealimentación
+    r.Kff = kff;
     t0 = tic;
     try
         res = correr_pil3(char(c.modo), 'K', c.K, 'Kp', c.Kp, 'Ki', c.Ki, 'Usat', c.Usat, ...
-            'Hs', o.Hs, 'Tp', o.Tp, 'Tsim', o.Tsim, 'NoIdeal', ni, 'Figura', false);
+            'Hs', o.Hs, 'Tp', o.Tp, 'Tsim', o.Tsim, 'NoIdeal', ni, 'Kff', kff, 'Figura', false);
         r.res = res; r.estable = true;
     catch err
         % errores de código (no de la simulación) detienen el lote: no son corridas inestables

@@ -7,18 +7,18 @@ function res = correr_pil3(modo, varargin)
 %   correr_pil3('pil', 'NoIdeal', [1 1 1 1])            sensor no ideal, sin editar archivos
 % Opciones: K (lazo de nivelación, 3), Hs (altura significativa, 2 m), Tp (periodo pico, 10 s), Tsim (30 s),
 %   TIni (2 s, se ignora el arranque), Puerto (último disponible), Figura (true),
-%   Kp, Ki, Usat y NoIdeal = [lin hist q ruido] (por defecto los de config_pil3.m).
+%   Kp, Ki, Usat, Kff (prealimentación, solo MiL) y NoIdeal = [lin hist q ruido] (por defecto los de config_pil3.m).
 % Las ganancias del PI y las no idealidades se editan en config_pil3.m.
 % Devuelve las inclinaciones pico y RMS de la mesa [grados], u_rms y sat_pct (por válvula) y las señales.
 p = inputParser;
 addParameter(p, 'K', 3); addParameter(p, 'Hs', 2); addParameter(p, 'Tp', 10); addParameter(p, 'Tsim', 30);
 addParameter(p, 'TIni', 2); addParameter(p, 'Puerto', []); addParameter(p, 'Figura', true);
-addParameter(p, 'Kp', []); addParameter(p, 'Ki', []); addParameter(p, 'Usat', []); addParameter(p, 'NoIdeal', []);
+addParameter(p, 'Kp', []); addParameter(p, 'Ki', []); addParameter(p, 'Kff', []); addParameter(p, 'Usat', []); addParameter(p, 'NoIdeal', []);
 parse(p, varargin{:}); o = p.Results;
 
 % Sobrescrituras de config_pil3.m: las lee config_pil3 desde el workspace base
 ovr = struct();
-for c = {'Kp', 'Ki', 'Usat'}, if ~isempty(o.(c{1})), ovr.(c{1}) = o.(c{1}); end, end
+for c = {'Kp', 'Ki', 'Usat', 'Kff'}, if ~isempty(o.(c{1})), ovr.(c{1}) = o.(c{1}); end, end
 if ~isempty(o.NoIdeal)
     ovr.en_lin = o.NoIdeal(1); ovr.en_hist = o.NoIdeal(2); ovr.en_q = o.NoIdeal(3);
     if numel(o.NoIdeal) > 3, ovr.en_ruido = o.NoIdeal(4); else, ovr.en_ruido = 0; end
