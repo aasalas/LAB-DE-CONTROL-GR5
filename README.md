@@ -154,8 +154,8 @@ poca memoria libre la computadora se satura.
    |---|---|---|
    | `Kp`, `Ki` | Ganancias del PI de cada pistón (el mismo en los tres) | 27.5, 1 |
    | `Usat` | Saturación del comando de la válvula, 1 = 100 % | 1 |
-   | `en_lin`, `en_hist`, `en_q` | No idealidades del sensor: linealidad (0.09 mm), histéresis (0.004 mm) y ADC de 10 bits (0.44 mm) | 0, 0, 0 |
-   | `en_ruido`, `ruido_mm` | Ruido eléctrico en la entrada analógica, independiente por pistón, y su desviación estándar | 0, 0.44 mm |
+   | `en_lin`, `en_hist`, `en_q` | No idealidades del sensor: linealidad (0.09 mm), histéresis (0.004 mm) y ADC de 10 bits (0.44 mm); activas por defecto | 1, 1, 1 |
+   | `en_ruido`, `ruido_mm` | Ruido eléctrico en la entrada analógica, independiente por pistón, y su desviación estándar | 1, 2.2 mm |
    | `ver_mechanics` | 1 abre Mechanics Explorer (animación 3D); consume mucha memoria | 0 |
 
    Desde el 16 nov 2026 la plataforma usa la **arquitectura B** (prealimentación pura): la
