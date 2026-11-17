@@ -55,7 +55,8 @@ ax1 = nexttile(tl, [1 3]); hold on; grid off; box off;
 % el modelo es una suma finita de senoides: el espectro es discreto (una línea por f_n)
 stem(f, S, 'filled', 'Color', azul, 'MarkerSize', 2.5, 'LineWidth', 0.8);
 plot([fp fp], [0 1.12*max(Sc)], '--', 'Color', [0.3 0.3 0.3]);
-text(fp + 0.04*fp, 1.08*max(Sc), sprintf('$f_p = 1/T_p = %.2g$ Hz', fp), 'FontSize', 8, 'Interpreter', 'latex');
+text(fp + 0.05*fp, 1.02*max(Sc), sprintf('$\\displaystyle f_p=\\frac{1}{T_p}=%.2g$ Hz', fp), 'FontSize', 9, ...
+    'Interpreter', 'latex', 'VerticalAlignment', 'middle');
 xlim([0.4 2.6]*fp); ylim([0 1.15*max(Sc)]);       % la cola hasta f_max = 4 f_p es casi nula
 xlabel('Frecuencia $f$ [Hz]', 'Interpreter', 'latex'); ylabel('$S(f_n)$ [m$^2$/Hz]', 'Interpreter', 'latex');
 title('Espectro de Pierson--Moskowitz', 'FontWeight', 'normal', 'Interpreter', 'latex');
@@ -115,10 +116,9 @@ marco(ax3, p0, sx, sy, e3, 7);                       % al final: sobre el plano 
 daspect([1 1 1/e3]); axis tight off; view(-38, 32); camzoom(ax3, 1.7);
 camlight('headlight'); lighting gouraud; material dull;
 title('Plano tangente en $(0, 0)$', 'FontWeight', 'normal', 'Interpreter', 'latex');
-text(0.5, -0.02, {sprintf('$\\partial\\eta/\\partial x = %.3f$, \\ $\\partial\\eta/\\partial y = %.3f$', sx, sy), ...
-    sprintf('$\\theta_b = -\\arctan(\\partial\\eta/\\partial x) = %.2f^\\circ$', rad2deg(theta_b)), ...
-    sprintf('$\\alpha_b = -\\arctan(\\partial\\eta/\\partial y) = %.2f^\\circ$ \\ ($\\times %d$)', rad2deg(alpha_b), e3)}, ...
-    'Units', 'normalized', 'HorizontalAlignment', 'center', 'VerticalAlignment', 'top', 'FontSize', 7, 'Interpreter', 'latex');
+text(0.5, -0.02, {sprintf('$\\displaystyle \\theta_b=-\\arctan\\frac{\\partial\\eta}{\\partial x}=%.2f^\\circ$', rad2deg(theta_b)), ...
+    sprintf('$\\displaystyle \\alpha_b=-\\arctan\\frac{\\partial\\eta}{\\partial y}=%.2f^\\circ$', rad2deg(alpha_b))}, ...
+    'Units', 'normalized', 'HorizontalAlignment', 'center', 'VerticalAlignment', 'top', 'FontSize', 9, 'Interpreter', 'latex');
 ax3.FontSize = 8;
 
 exportgraphics(f1, fullfile(here, 'espectro_pm.png'), 'Resolution', 300);
@@ -129,10 +129,11 @@ fprintf(['4 sqrt(m0) = %.3f m; 4 sqrt(sum A^2/2) = %.3f m; eta: min %.3f, max %.
 end
 
 function marco(ax, p0, sx, sy, exag, Lp)
-% Marco local de la base en p0: x_b y y_b tangentes a la superficie, z_b normal.
-% Se arma en coordenadas de pantalla (z*exag) y se vuelve a datos.
-tx = [1 0 sx*exag]; tx = tx/norm(tx);
-ty = [0 1 sy*exag]; ty = ty/norm(ty);
+% Marco local de la base en p0, con las pendientes reales (sin exagerar): x_b y y_b tangentes a la
+% superficie, z_b normal y hacia arriba. Se arma en coordenadas de pantalla (z sin escalar) y se pasa a
+% datos dividiendo z entre la exageración, así se ve con su orientación física.
+tx = [1 0 sx]; tx = tx/norm(tx);
+ty = [0 1 sy]; ty = ty/norm(ty);
 nz = cross(tx, ty); nz = nz/norm(nz);
 col = {[0.80 0.10 0.10], [0.10 0.55 0.10], [0.10 0.25 0.80]};
 nom = {'x_b', 'y_b', 'z_b'}; v = {tx, ty, nz};

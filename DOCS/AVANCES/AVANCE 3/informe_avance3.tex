@@ -71,7 +71,7 @@ El PI se había sintonizado a mano & Se identificó $G(s)$ del actuador y el PI 
 \label{sec:sistema}
 
 \subsection{Arquitectura}
-La Fig.~\ref{fig:arquitectura} resume el sistema. Un IMU en la base mide su inclinación ($\alpha_b$, $\theta_b$), la cinemática inversa calcula la longitud que debe tener cada cilindro para que la mesa quede horizontal, y tres lazos PI de posición, uno por cilindro, llevan cada vástago a su referencia $x_{ref,i}$. Es una prealimentación pura, el esquema usual en compensación activa de oleaje \cite{wang2025}: la mesa no necesita medirse para nivelarse.
+La Fig.~\ref{fig:arquitectura} resume el sistema. Un IMU en la base mide su inclinación ($\alpha_b$, $\theta_b$), la cinemática inversa calcula la longitud que debe tener cada cilindro para que la mesa quede horizontal, y tres lazos PI de posición, uno por cilindro, llevan cada vástago a su referencia $x_{ref,i}$. Es una prealimentación pura, el esquema usual en compensación activa de oleaje \cite{wang2025}: la mesa no necesita medirse para nivelarse. La base metálica va montada sobre un flotador hexagonal de \SI{2}{m} entre vértices, que sigue el movimiento del mar.
 
 \begin{figure*}[t]
 \centering
@@ -242,7 +242,7 @@ Ruido & Gaussiano, por cilindro & $\sigma=2.2$ \\
 Frente al sensor ideal, el ruido es lo que más se nota: con $H_s=\SI{2}{m}$ el comando de las válvulas sube de \num{0.044} a \num{0.077} RMS y el pico de \textit{pitch} de la mesa, de \SI{0.35}{\degree} a \SI{0.44}{\degree}. El lazo de posición filtra el ruido de \SI{50}{Hz}, y el sesgo, igual en los tres cilindros, solo sube la mesa sin inclinarla.
 
 \subsection{Nivelación}
-La Tabla~\ref{tab:resultados} resume los cuatro estados de mar y las Figs.~\ref{fig:resultados} y~\ref{fig:oleaje} los muestran con la base y la mesa en la misma escala. En todos los casos la mesa queda unas ocho veces por debajo de la base, y con el mar de $H_s=\SI{2}{m}$ cumple el requisito de \SI{1}{\degree} con amplio margen. Lo que sobra tiene la forma de la ola, levemente atrasado: es el tiempo que tardan los cilindros en seguir su referencia, y crece con la ola. Ninguna válvula satura; con la base a \SI{15}{\degree} los vástagos llegan a \SI{15}{mm} del tope, el límite de esta plataforma.
+La Tabla~\ref{tab:resultados} resume los cuatro estados de mar; las Figs.~\ref{fig:resultados} y~\ref{fig:oleaje} muestran las bases de \SIlist{15;10;5}{\degree} con la base y la mesa en la misma escala. En todos los casos la mesa queda unas ocho veces por debajo de la base, y con el mar de $H_s=\SI{2}{m}$ cumple el requisito de \SI{1}{\degree} con amplio margen. Lo que sobra tiene la forma de la ola, levemente atrasado: es el tiempo que tardan los cilindros en seguir su referencia, y crece con la ola. Ninguna válvula satura; con la base a \SI{15}{\degree} los vástagos llegan a \SI{15}{mm} del tope, el límite de esta plataforma.
 
 \begin{table}[H]
 \centering
@@ -266,7 +266,7 @@ Base de \SI{15}{\degree} & 15.00 & 8.04 & 1.81 & 1.02 & $-20.2$ \\
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{oleaje_casos.pdf}
-\caption{\textit{Pitch} de la base y de la mesa con $H_s=\SI{2}{m}$ y con bases de \SIlist{5;10}{\degree} ($T_p=\SI{12}{s}$), en la misma escala; el límite del eje es la inclinación máxima de la base. PiL con el sensor no ideal.}
+\caption{\textit{Pitch} de la base y de la mesa con bases de \SIlist{5;10}{\degree} ($T_p=\SI{12}{s}$), en la misma escala; el límite del eje es la inclinación máxima de la base. PiL con el sensor no ideal.}
 \label{fig:oleaje}
 \end{figure}
 
@@ -278,7 +278,7 @@ Base de \SI{15}{\degree} & 15.00 & 8.04 & 1.81 & 1.02 & $-20.2$ \\
 \item Con la prealimentación de la inclinación de la base, y con las no idealidades del sensor, la mesa queda en \SI{0.44}{\degree} con $H_s=\SI{2}{m}$, dentro del requisito de \SI{1}{\degree}, sin medir la mesa.
 \item La inclinación se reduce unas ocho veces hasta con una base de \SI{15}{\degree}, en que la mesa llega a \SI{1.81}{\degree}.
 \end{itemize}
-Como trabajo futuro, la misma cinemática inversa permite controlar también la altura $Z_0$, los desplazamientos en $x$ e $y$ y el giro en yaw, cambiando solo la pose que se le ordena a la mesa. Quedan además modelar el IMU de la base con sus no idealidades y ejecutar la cinemática inversa en el microcontrolador.
+Como trabajo futuro, la misma cinemática inversa permite controlar también la altura $Z_0$, los desplazamientos en $x$ e $y$ y el giro en yaw, cambiando solo la pose que se le ordena a la mesa. Sobre la mesa podría montarse la lanzadera de cohetes del equipo CRATER del Grupo de Ingeniería Aeroespacial (GIA) de la Universidad de Costa Rica, que compartió sus planos: un riel guía de acero de unos \SI{2.5}{m}, cuyo apuntamiento la plataforma mantendría frente al oleaje. Quedan además modelar el IMU de la base con sus no idealidades y ejecutar la cinemática inversa en el microcontrolador.
 
 % =====================================================================
 \begin{thebibliography}{9}
