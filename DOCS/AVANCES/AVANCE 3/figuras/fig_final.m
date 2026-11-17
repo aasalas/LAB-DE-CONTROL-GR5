@@ -1,6 +1,6 @@
 function fig_final()
 % FIG_FINAL  El caso más exigente: base de hasta 15° (Hs = 15.49 m, Tp = 12 s), PiL no ideal (Arduino,
-% encoder de 5 LSB), Kp = 27.5, Ki = 1. Pitch y roll de la base y de la mesa con la misma escala, y el
+% encoder con ruido de 10 LSB), Kp = 27.5, Ki = 1. Pitch y roll de la base y de la mesa con la misma escala, y el
 % pico de cada respuesta marcado. Lee ../resultados/exp13_informe.mat y escribe pil_nivelacion.pdf/.png
 here = fileparts(mfilename('fullpath')); dres = fullfile(here, '..', 'resultados'); t0 = 2;
 E = load(fullfile(dres, 'exp13_informe.mat')).R;

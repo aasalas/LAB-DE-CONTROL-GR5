@@ -3,6 +3,22 @@
 Planes y resultados de los experimentos con `Model_aaron.slx` (MiL) y `Model_aaronC.slx` (PiL).
 Más reciente primero. El historial general del PiL está en la *Bitácora* del `README.md` de la raíz.
 
+## 17 nov 2026: ruido del encoder al doble (10 LSB, σ = 4.4 mm)
+
+Pedido de Aarón: el doble del ruido en las pruebas reportadas (`ruido_mm` = 4.4 en `config_pil3.m`).
+Se repitieron los casos no ideales de `exp13_informe.m` (el nominal PiL ahora también vive ahí, ya no en
+`exp12_B_pil.mat`); los de 5 LSB quedan en `resultados/previos/exp13_informe_ruido5lsb.mat`.
+PiL no ideal, pico de pitch / roll de la mesa, u RMS:
+
+| Caso | 5 LSB | 10 LSB | u RMS (10 LSB) |
+|---|---|---|---|
+| Nominal (Hs = 2 m) | 0.44° / 0.25° | **0.58° / 0.38°** | 0.135 (antes 0.077) |
+| Base 5° | 0.57° / 0.37° | 0.67° / 0.52° | 0.144 |
+| Base 10° | 1.12° / 0.66° | 1.21° / 0.82° | 0.185 |
+| Base 15° | 1.81° / 1.02° | 1.88° / 1.18° | 0.248 |
+
+Sigue cumpliendo 1° en el nominal, sin saturar. El MiL no ideal nominal da lo mismo que el PiL (0.582°).
+
 ## 16 nov 2026: corridas del informe del Avance 3 (`exp13_informe.m`)
 
 Informe reescrito como paper compacto con el resultado final (decisión de Aarón). Corridas nuevas con B

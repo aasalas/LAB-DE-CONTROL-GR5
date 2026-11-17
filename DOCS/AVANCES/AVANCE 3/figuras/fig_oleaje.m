@@ -1,15 +1,15 @@
 function T = fig_oleaje()
-% FIG_OLEAJE  Nivelación con el PiL no ideal (Arduino, encoder de 5 LSB), Kp = 27.5, Ki = 1, en los cuatro
+% FIG_OLEAJE  Nivelación con el PiL no ideal (Arduino, encoder con ruido de 10 LSB), Kp = 27.5, Ki = 1, en los cuatro
 % estados de mar: nominal (Hs = 2 m, Tp = 10 s) y olas lentas (Tp = 12 s) que inclinan la base 5°, 10° y
 % 15° (Hs = 5.06, 10.20 y 15.49 m).
 %   oleaje_casos.pdf/.png      pitch de la base y de la mesa con la misma escala (bases de 5° y 10°; el
 %                              de 15° es la figura de fig_final.m), con el pico de cada respuesta marcado
 %   ../resultados/metricas_oleaje.csv   tabla del informe, los cuatro casos
-% Lee ../resultados/exp13_informe.mat y exp12_B_pil.mat (p2: PiL no ideal nominal).
+% Lee ../resultados/exp13_informe.mat.
 here = fileparts(mfilename('fullpath')); dres = fullfile(here, '..', 'resultados'); t0 = 2;
-E = load(fullfile(dres, 'exp13_informe.mat')).R; P = load(fullfile(dres, 'exp12_B_pil.mat'));
+E = load(fullfile(dres, 'exp13_informe.mat')).R;
 base = {E.sin_nominal, E.sin_b05, E.sin_b10, E.sin_b15};
-mesa = {P.p2, E.pil_noideal_b05, E.pil_noideal_b10, E.pil_noideal_b15};
+mesa = {E.pil_noideal_nominal, E.pil_noideal_b05, E.pil_noideal_b10, E.pil_noideal_b15};
 lim = [3 5 10 15];
 
 % --- tabla de los cuatro casos

@@ -17,8 +17,8 @@ en_lin  = 1;    % error de linealidad: sesgo de 0.09 mm (peor caso)
 en_hist = 1;    % histéresis: backlash de 0.004 mm
 en_q    = 1;    % ADC de 10 bits sobre 450 mm: paso de 0.44 mm
 en_ruido = 1;   % ruido eléctrico en la entrada analógica, independiente en cada pistón
-ruido_mm = 2.2; % desviación estándar del ruido [mm]: 5 LSB del ADC (antes 1 LSB, 0.44 mm, que en
-                % la inclinación de la mesa no se distinguía sin zoom)
+ruido_mm = 4.4; % desviación estándar del ruido [mm]: 10 LSB del ADC, desde el 17-11-2026 (antes 5 LSB,
+                % 2.2 mm, y antes 1 LSB, 0.44 mm, que en la mesa no se distinguía sin zoom)
 
 %% Visualización
 ver_mechanics = 0;   % 1 = abre Mechanics Explorer (animación 3D) al simular; 0 = solo los scopes
