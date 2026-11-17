@@ -80,13 +80,13 @@ catch err
     if isempty(o.Puerto), pil3_puerto; else, pil3_puerto(o.Puerto); end
     out = sim(mdl);
 end
-fprintf('Simulación lista en %.1f s\n', toc);
+t_sim_s = toc; fprintf('Simulación lista en %.1f s\n', t_sim_s);
 
 [tr, xr] = leer(out.logsout, 'roll_mesa'); [tp, xp] = leer(out.logsout, 'pitch_mesa');
 xr = xr*180/pi; xp = xp*180/pi; ir = tr >= o.TIni; ip = tp >= o.TIni;
 res = struct('modo', lower(modo), 'Hs', o.Hs, 'Tp', o.Tp, 't', tr, 'roll_deg', xr, 'pitch_deg', xp, ...
     'pico_roll', max(abs(xr(ir))), 'pico_pitch', max(abs(xp(ip))), ...
-    'rms_roll', sqrt(mean(xr(ir).^2)), 'rms_pitch', sqrt(mean(xp(ip).^2)));
+    'rms_roll', sqrt(mean(xr(ir).^2)), 'rms_pitch', sqrt(mean(xp(ip).^2)), 't_sim_s', t_sim_s);
 % Esfuerzo de control: u_RMS y % del tiempo con |u| en el límite Usat, por válvula
 [tu, xu] = leer(out.logsout, 'u_valvulas'); xu = double(xu); if size(xu,1) ~= numel(tu), xu = xu.'; end   % una columna por válvula
 iu = tu >= o.TIni; Us = evalin('base', 'Usat');

@@ -3,6 +3,29 @@
 Planes y resultados de los experimentos con `Model_aaron.slx` (MiL) y `Model_aaronC.slx` (PiL).
 Más reciente primero. El historial general del PiL está en la *Bitácora* del `README.md` de la raíz.
 
+## 16 nov 2026: corridas del informe del Avance 3 (`exp13_informe.m`)
+
+Informe reescrito como paper compacto con el resultado final (decisión de Aarón). Corridas nuevas con B
+y Kp = 27.5 (MiL salvo indicación; pico de pitch / roll):
+
+| Caso | Nominal (Hs = 2 m) | Base 5° | Base 10° | Base 15° |
+|---|---|---|---|---|
+| Sin compensar | 2.871° / 1.504° | 4.999° | 10.002° | 14.995° |
+| MiL | 0.349° / 0.161° | 0.521° / 0.248° | 1.090° / 0.531° | 1.793° / 0.868° |
+| MiL no ideal | 0.438° / 0.247° | — | — | — |
+| PiL no ideal | 0.438° / 0.247° | 0.572° / 0.370° | 1.115° / 0.664° | 1.808° / 1.017° |
+
+- El PiL no ideal coincide exactamente con el MiL no ideal (RMSE 0): mismo ruido, misma semilla.
+- **Tiempo de ejecución de `ctrl_pi3` en el ATmega328P** (perfil de ejecución del PIL, 201 pasos):
+  316 µs de media y 332 µs de máximo, el 3.3 % del periodo de 10 ms. La segunda vez el perfil falló por
+  la conexión con la placa; el valor quedó guardado a mano en `R.tiempos` con su origen.
+- La latencia no se pudo medir con el tiempo de pared (lo dominan la compilación y la conexión); en el
+  informe se acota: 36 B a 115200 baud (3.1 ms) más 0.33 ms de cómputo.
+- Validación unitaria con Kp = 27.5 (`run_pil`): escalón de 0 a 0.40 m con Mp 0.75 %, ts 0.95 s y
+  e_ss 0.10 mm; PiL ideal = MiL; PiL no ideal a 0.09 mm RMS. Escalón de 10 mm: Mp 7.5 %, ts 0.21 s.
+- Figuras nuevas con estilo común: `fig_pi.m`, `fig_final.m` y `fig_oleaje.m`; la de arquitectura
+  (`fig3_cascada.tex`) es ahora la cadena B. El esquema hidráulico dice Ø40/28 (corregido sobre el PNG).
+
 ## 16 nov 2026: arquitectura B implementada en los modelos, Kp = 27.5 (verificación `exp12`)
 
 **Decisiones de Aarón:** adoptar Kp = 27.5 como controlador único e implementar B, podando lo que no se
