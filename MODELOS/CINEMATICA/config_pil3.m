@@ -22,11 +22,13 @@ ruido_mm = 2.2; % desviación estándar del ruido [mm]: 5 LSB del ADC (antes 1 L
 %% Visualización
 ver_mechanics = 0;   % 1 = abre Mechanics Explorer (animación 3D) al simular; 0 = solo los scopes
 
-%% Lazo exterior de nivelación: la ganancia K = 3 está en los bloques Gain y Gain1 del modelo
-%  (roll y pitch), con saturación de ±0.3 rad. Gain2 = 0 deja el lazo de heave apagado.
+%% Lazo exterior de nivelación: prealimentación (Kff, abajo) + realimentación K = 3 en los bloques Gain
+%  y Gain1 del modelo (roll y pitch; con g = 1 el lazo es inestable desde K = 6). El comando de ángulo
+%  se satura en ±30° (pi/6 rad). Sin realimentación (K = 0) la mesa se desvía poco a poco
+%  (exp7_solo_ff: 2.4° de pitch a los 30 s). Gain2 = 0 deja el lazo de heave apagado.
 %  Hasta el 16-11-2026 era K = 15 con ±0.6 rad, pero la cinemática inversa hacía que la mesa
 %  girara solo g = 0.188 del ángulo pedido (K = 15 equivalía a K = 2.8 con g = 1).
-%% Prealimentación de la inclinación de la base (solo Model_aaron, MiL): 1 = activa, 0 = apagada.
+%% Prealimentación de la inclinación de la base (Model_aaron y Model_aaronC): 1 = activa, 0 = apagada.
 %  Se suma -Kff*[roll; pitch] de la base al comando del lazo de nivelación (un IMU en la base).
 Kff = 1;
 

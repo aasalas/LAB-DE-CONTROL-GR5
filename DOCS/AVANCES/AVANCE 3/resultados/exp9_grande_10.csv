@@ -1,0 +1,2 @@
+id,modo,K,Kp,Ki,Usat,estable,t_sim_s,pico_pitch,rms_pitch,pico_roll,rms_roll,urms_max,sat_pct_max,atten_pitch_dB,atten_roll_dB
+mil_sin,mil,0,20,1,1,1,101.5309541,10.0021388852062,4.69057867035207,5.31394764955781,1.98781709268794,0.00130563063494727,0,0,0

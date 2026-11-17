@@ -99,8 +99,8 @@ La Fig.~\ref{fig:cascada} resume el sistema. El oleaje mueve la base en \textit{
 En el modelo de Simulink (\texttt{Model\_aaronC.slx}), el comando de orientación combina la prealimentación de la inclinación de la base, que mediría un IMU montado en ella, con una realimentación proporcional sobre el ángulo medido de la mesa:
 \begin{equation}
 \begin{aligned}
-\alpha_c &= \operatorname{sat}_{\pm0.3}\!\big(-K_{ff}\,\alpha_b+K(\alpha_{ref}-\alpha)\big),\\
-\theta_c &= \operatorname{sat}_{\pm0.3}\!\big(-K_{ff}\,\theta_b+K(\theta_{ref}-\theta)\big),
+\alpha_c &= \operatorname{sat}_{\pm\SI{30}{\degree}}\!\big(-K_{ff}\,\alpha_b+K(\alpha_{ref}-\alpha)\big),\\
+\theta_c &= \operatorname{sat}_{\pm\SI{30}{\degree}}\!\big(-K_{ff}\,\theta_b+K(\theta_{ref}-\theta)\big),
 \end{aligned}
 \label{eq:lazo_ext}
 \end{equation}
@@ -338,7 +338,9 @@ Con la cinemática~\eqref{eq:ik}, $g=1$. Sin prealimentación ($K_{ff}=0$) la re
 
 \textit{Prealimentación.} Como la mesa reproduce la base con ganancia unitaria (un ajuste con $K=0$ da 1.02 en \textit{roll} y 0.99 en \textit{pitch}, con acoplamientos menores al \SI{3}{\percent}), basta ordenar el ángulo contrario al de la base, $K_{ff}=1$, para cancelar la perturbación sin esperar a que la mesa se incline. La prealimentación no cambia la estabilidad del lazo, porque no forma parte de él. Su límite es físico: los cilindros deben moverse con la ola, y a válvula abierta llegan a \SI{0.43}{m/s} extendiendo y a \SI{0.29}{m/s} retrayendo.
 
-\textit{Saturación.} El comando de ángulo se limita a $\pm\SI{0.3}{rad}$ (\SI{17}{\degree}). Con~\eqref{eq:jacobiano} pide como máximo unos \SI{210}{mm} de elongación, dentro de los $\pm\SI{220}{mm}$ de carrera libre alrededor de $x_0$. Con la cinemática anterior el límite era de $\pm\SI{0.6}{rad}$, pero la mesa realizaba solo \SI{6.5}{\degree}.
+\textit{Saturación.} El comando de ángulo se limita a $\pm\SI{30}{\degree}$. Con~\eqref{eq:jacobiano}, \SI{30}{\degree} pedirían unos \SI{360}{mm} de elongación, más que los $\pm\SI{220}{mm}$ de carrera libre alrededor de $x_0$, así que el límite efectivo lo pone la carrera de los cilindros, unos \SI{18}{\degree}.
+
+\textit{Por qué no basta la prealimentación.} Sin realimentación ($K=0$) la mesa se desvía poco a poco: con $H_s=\SI{2}{m}$ el error medio pasa de \SI{0.01}{\degree} en los primeros \SI{10}{s} a \SI{1}{\degree} hacia el final, y los picos llegan a \SI{2.4}{\degree} en \textit{pitch} y \SI{3.5}{\degree} en \textit{roll}. La prealimentación no mide si la mesa quedó horizontal, así que acumula las pequeñas diferencias entre el modelo y la planta; la realimentación con $K=3$ las corrige apenas aparecen.
 
 \begin{figure*}[t]
 \centering
