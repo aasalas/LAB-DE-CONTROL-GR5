@@ -1,5 +1,4 @@
-% Fig. 3 del informe del Avance 3: estructura en cascada de MARLUP con el controlador final
-% (prealimentación de la base + realimentación K). Compilar con: pdflatex fig3_cascada.tex
+% Arquitectura de MARLUP (arquitectura B: prealimentación pura). Compilar con: pdflatex fig3_cascada.tex
 \documentclass[tikz,border=4pt]{standalone}
 \usepackage[T1]{fontenc}
 \usepackage{newtxtext,newtxmath}
@@ -13,29 +12,15 @@
     font=\small,
     blk/.style={draw, thick, align=center, minimum height=1.0cm, inner sep=4pt},
     act/.style={blk, fill=black!5, minimum width=3.1cm, minimum height=0.95cm},
-    sum/.style={draw, thick, circle, minimum size=5.5mm, inner sep=0pt},
     sig/.style={->, thick},
     dsig/.style={->, thick, dashed},
   ]
 
-  % ---------------- lazo exterior ----------------
-  \node (ref) at (0,0) {$\begin{bmatrix}\alpha_{ref}\\ \theta_{ref}\end{bmatrix}=\mathbf{0}$};
-  \node[sum, right=0.7cm of ref] (s1) {};
-  \node[blk, right=0.6cm of s1, minimum width=1.0cm] (K) {$K$\\[-1pt]\footnotesize $=3$};
-  \node[sum, right=0.6cm of K] (s2) {};
-  \node[blk, right=0.6cm of s2, minimum width=1.5cm] (sat) {saturación\\ $\pm\SI{30}{\degree}$};
-  \node[blk, right=0.8cm of sat, minimum width=2.6cm, minimum height=3.6cm] (ik)
-       {\textbf{Cinemática}\\ \textbf{inversa}\\[3pt] $\ell_i=\lVert R(\mathbf{p}_i+z\hat{\mathbf{k}})-\mathbf{b}_i\rVert$};
-
-  \draw[sig] (ref) -- (s1);
-  \draw[sig] (s1) -- (K);
-  \draw[sig] (K) -- node[above, pos=0.45] {} (s2);
-  \draw[sig] (s2) -- (sat);
-  \draw[sig] (sat) -- node[above] {$\alpha_c,\theta_c$} (ik);
-  \node[font=\scriptsize] at ($(s1.south west)+(-0.05,-0.1)$) {$-$};
-  \node[font=\scriptsize] at ($(s1.north west)+(-0.05,0.1)$) {$+$};
-  \node[font=\scriptsize] at ($(s2.north east)+(0.1,0.12)$) {$+$};
-  \node[font=\scriptsize] at ($(s2.south west)+(-0.05,-0.1)$) {$+$};
+  % ---------------- cinemática inversa ----------------
+  \node[blk, minimum width=3.3cm, minimum height=3.6cm] (ik) at (0,0)
+       {\textbf{Cinemática}\\ \textbf{inversa}\\[4pt]
+        $\ell_i=\big\lVert R_b^{\top}(\mathbf{p}_i+z\hat{\mathbf{k}})-\mathbf{b}_i\big\rVert$\\[4pt]
+        \footnotesize la mesa gira al revés\\[-1pt] \footnotesize que la base};
 
   % ---------------- actuadores ----------------
   \node[act, right=1.6cm of ik] (a2) {Actuador 2\\ \footnotesize PI de posición + encoder lineal};
@@ -43,7 +28,7 @@
   \node[act, below=0.35cm of a2] (a3) {Actuador 3\\ \footnotesize PI de posición + encoder lineal};
   \begin{scope}[on background layer]
     \node[draw, dashed, gray, rounded corners, inner sep=6pt, fit=(a1)(a3),
-          label={[gray]above:{3 lazos SISO en el Arduino (PiL)}}] (pil) {};
+          label={[gray]above:{3 PI en el Arduino (PiL)}}] (pil) {};
   \end{scope}
   \foreach \i in {1,2,3} {
     \draw[sig] (ik.east |- a\i.west) -- node[above] {$x_{ref,\i}$} (a\i.west);
@@ -51,27 +36,20 @@
 
   % ---------------- plataforma ----------------
   \node[blk, right=1.7cm of a2, minimum width=2.6cm, minimum height=3.4cm] (plat)
-       {\textbf{Plataforma}\\ Simscape\\ Multibody\\[3pt] \footnotesize la mesa gira sobre\\ \footnotesize el centro de la base};
+       {\textbf{Plataforma}\\ Simscape\\ Multibody};
   \foreach \i in {1,2,3} {
     \draw[sig] ([yshift=4pt]a\i.east) -- node[above] {$s_{\i}$} ([yshift=4pt]a\i.east -| plat.west);
     \draw[dsig] ([yshift=-6pt]a\i.east -| plat.west) -- node[below, font=\footnotesize] {$F_{L,\i}$} ([yshift=-6pt]a\i.east);
   }
-  \coordinate (out) at ($(plat.east)+(1.9,0)$);
-  \draw[sig] (plat.east) -- node[above] {$\alpha,\ \theta,\ z$} (out);
+  \draw[sig] (plat.east) -- node[above] {$\alpha,\ \theta$} ++(1.6,0) node[right, align=left, font=\footnotesize] {mesa\\ nivelada};
 
   % ---------------- oleaje e IMU ----------------
   \node[blk, above=1.6cm of plat, minimum width=3.3cm] (ola)
        {Oleaje Pierson--Moskowitz\\ $H_s=\SI{2}{m},\ T_p=\SI{10}{s}$};
   \draw[sig] (ola) -- node[right] {$z_b,\ \alpha_b,\ \theta_b$} (plat);
-  \node[blk, minimum width=1.4cm] (ff) at (s2 |- ola) {$-K_{ff}$\\[-1pt]\footnotesize $=-1$};
-  \draw[dsig] (ola.west) -- node[above] {inclinación de la base medida (IMU) $\alpha_b,\ \theta_b$} (ff.east);
-  \draw[sig] (ff) -- (s2);
-
-  % ---------------- realimentación ----------------
-  \coordinate (fb) at ($(plat.east)+(0.9,0)$);
-  \fill (fb) circle (1.5pt);
-  \coordinate (bot) at ($(a3.south)+(0,-1.1)$);
-  \draw[sig] (fb) |- node[pos=0.75, below] {ángulo medido de la mesa $\alpha,\ \theta$} (bot -| s1) -- (s1);
+  \draw[dsig] (ola.west) -| node[pos=0.25, above] {IMU en la base: $\alpha_b,\ \theta_b$} (ik.north);
+  \node[left=0.9cm of ik, align=center, font=\footnotesize] (z) {$z=Z_0$};
+  \draw[sig] (z) -- (ik);
 
 \end{tikzpicture}
 \end{document}
