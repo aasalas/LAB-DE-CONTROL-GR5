@@ -3,6 +3,55 @@
 Planes y resultados de los experimentos con `Model_aaron.slx` (MiL) y `Model_aaronC.slx` (PiL).
 Más reciente primero. El historial general del PiL está en la *Bitácora* del `README.md` de la raíz.
 
+## 16 nov 2026 (madrugada): arquitectura B y optimización de Kp, Ki y presión (`exp11`)
+
+**Decisión de Aarón:** quedarse con la **arquitectura B**, prealimentación pura: IMU de la base →
+cinemática inversa → 3 PI, sin lazo K sobre la mesa, sin saturación ni prealimentación de velocidad en
+los pistones. Es el esquema de Wang et al. (2025). Acepta un error mayor a cambio de la simplicidad.
+
+**B contra la arquitectura anterior (MiL, 30 s, Kp = 20, Ki = 1, 160 bar):**
+
+| Caso | Pico pitch | Pico roll |
+|---|---|---|
+| B, nominal (Hs = 2 m, Tp = 10 s) | 0.449° | 0.200° |
+| B, base de 15° (Hs = 15.49 m, Tp = 12 s) | 2.283° | 1.044° |
+| Anterior (Kff = 1 + K = 3, ±30°), 15° | 0.66° | 0.30° |
+
+- La cinemática actual ya es la **inversa exacta** de la base: la unión `Unión 4DOF` aplica Rx y luego Ry,
+  y `marlup_ik` lo deshace en ese orden. Invertir el orden dio 2.290° (igual o peor).
+- El residuo de B es el **atraso de los pistones**, no la geometría: el pistón 1 se atrasa hasta 28.3 mm
+  (11.1 y 16.6 mm los otros), y 28 mm / 0.694 m/rad ≈ 2.3°. La media del error es ~0 (sin deriva).
+- La saturación de ±30° nunca actuaba: sin ella los pistones van de 0.015 a 0.397 m (carrera 0–0.45 m).
+
+**Optimización (`exp11_opt_prealimentacion.m`, ~20 min la primera vez; el barrido solo, 30 s).**
+Palancas fieles a la prealimentación pura: Kp, Ki y presión de suministro (160 a 500 bar; el CDH1 es de
+**250 bar nominales**, 375 de prueba). Método: un sustituto del pistón (PI discreto + curva v(u)
+identificada por presión + τ + θ) barre 1512 combinaciones en 30 s. Calibra con 2 % de error contra la
+plataforma en el seguimiento de los pistones, pero **no predice el sobrepaso** del escalón de 10 mm del
+modelo no lineal (16 puntos de error medio). Por eso la regla de `diseno_pi` (Mp ≤ 10 %, ts ≤ 2 s,
+MG ≥ 10 dB, MF ≥ 60°) se aplica con una búsqueda de frontera (bisección del mayor Kp por presión y Ki)
+en el modelo no lineal de un pistón.
+
+| Validado en la plataforma (B) | 15°: pitch / roll | Nominal: pitch / roll | Mp 10 mm |
+|---|---|---|---|
+| Actual: 20/1, 160 bar | 2.283° / 1.044° | 0.449° / 0.200° | 2.4 % |
+| **27.5/1, 160 bar** (solo cambia Kp) | **1.793° / 0.868°** | **0.349° / 0.161°** | 7.5 % |
+| 22.5/1, 250 bar | 1.657° / 0.831° | 0.334° / 0.157° | 9.3 % |
+| 12.5/16, 500 bar (fuera de norma) | 1.691° / 0.626° | — | 9.5 % |
+
+- **La restricción activa es el sobrepaso del escalón de 10 mm.** Más presión sube la ganancia de la
+  válvula (Kv 0.74 → 1.31 m/s de 160 a 500 bar), pero obliga a bajar Kp en la misma proporción, así que
+  la ganancia del lazo queda casi igual: de 160 a 250 bar el pitch a 15° solo baja 8 % (1.79° → 1.66°).
+- **Ki alto (32–48) bajaría el residuo a ~1°**, porque el integrador sigue mejor la rampa de la ola, pero
+  sobrepasa 13–28 % en el escalón de 10 mm del modelo no lineal: no cumple la regla.
+- **Mejor opción realista: Kp = 27.5, Ki = 1 a 160 bar**: −21 % a 15° y −22 % en el nominal, sin
+  cambiar el equipo. El predictor del sustituto subestima el pitch final ~5 % (1.70° contra 1.79°).
+- 500 bar deja los pistones a 6 mm del tope (0.006 m) y da peor pitch que 250 bar: descartado.
+
+Resultados: `DOCS/AVANCES/AVANCE 3/resultados/exp11_*.mat/.csv`, figura `figuras/exp11_barrido.png`.
+**Pendiente de decisión de Aarón:** adoptar Kp = 27.5 (hoy el controlador único es Kp = 20, Ki = 1) e
+implementar B en `Model_aaron.slx` y `Model_aaronC.slx`.
+
 ## 16 nov 2026 (noche): prealimentación de la base, controlador final
 
 **Decisión de Aarón:** volver a su esquema original (Fig. 3 del informe): la mesa recibe el ángulo
