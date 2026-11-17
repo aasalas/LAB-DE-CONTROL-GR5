@@ -1,21 +1,23 @@
 function res = correr_pil3(modo, varargin)
-% CORRER_PIL3  Simula la plataforma completa y mide la inclinación residual de la mesa.
+% CORRER_PIL3  Simula la plataforma completa (arquitectura B: prealimentación pura) y mide la
+% inclinación residual de la mesa.
 %   correr_pil3('mil')                  MiL: Model_aaron.slx (controlador en el PC, sin Arduino)
 %   correr_pil3('pil')                  PiL: Model_aaronC.slx (controlador en el Arduino)
 %   correr_pil3('pil', 'Puerto', "COM8")
-%   correr_pil3('mil', 'K', 10, 'Hs', 1, 'Tp', 5.3, 'Tsim', 30)
+%   correr_pil3('mil', 'Hs', 1, 'Tp', 5.3, 'Tsim', 30)
 %   correr_pil3('pil', 'NoIdeal', [1 1 1 1])            sensor no ideal, sin editar archivos
-% Opciones: K (lazo de nivelación, 3), Hs (altura significativa, 2 m), Tp (periodo pico, 10 s), Tsim (30 s),
+% Opciones: Hs (altura significativa, 2 m), Tp (periodo pico, 10 s), Tsim (30 s),
 %   TIni (2 s, se ignora el arranque), Puerto (último disponible), Figura (true),
-%   Kp, Ki, Usat, Kff (prealimentación) y NoIdeal = [lin hist q ruido] (por defecto los de config_pil3.m).
+%   Kp, Ki, Usat y NoIdeal = [lin hist q ruido] (por defecto los de config_pil3.m). Ya no hay K ni Kff:
+%   la cinemática inversa recibe directamente la inclinación medida de la base.
 % Las ganancias del PI y las no idealidades se editan en config_pil3.m.
 % Antes de simular verifica con ola_exigencia que los cilindros puedan seguir la ola (velocidad y
 % carrera <= 95 % de 0.29 m/s y 220 mm); si no, no simula y da el error 'correr_pil3:ola'.
 % Devuelve las inclinaciones pico y RMS de la mesa [grados], u_rms y sat_pct (por válvula) y las señales.
 p = inputParser;
-addParameter(p, 'K', 3); addParameter(p, 'Hs', 2); addParameter(p, 'Tp', 10); addParameter(p, 'Tsim', 30);
+addParameter(p, 'Hs', 2); addParameter(p, 'Tp', 10); addParameter(p, 'Tsim', 30);
 addParameter(p, 'TIni', 2); addParameter(p, 'Puerto', []); addParameter(p, 'Figura', true);
-addParameter(p, 'Kp', []); addParameter(p, 'Ki', []); addParameter(p, 'Kff', []); addParameter(p, 'Usat', []); addParameter(p, 'NoIdeal', []);
+addParameter(p, 'Kp', []); addParameter(p, 'Ki', []); addParameter(p, 'Usat', []); addParameter(p, 'NoIdeal', []);
 parse(p, varargin{:}); o = p.Results;
 
 % Verificación previa: una ola que los cilindros no pueden seguir lleva a Simscape a detenerse
@@ -29,7 +31,7 @@ end
 
 % Sobrescrituras de config_pil3.m: las lee config_pil3 desde el workspace base
 ovr = struct();
-for c = {'Kp', 'Ki', 'Usat', 'Kff'}, if ~isempty(o.(c{1})), ovr.(c{1}) = o.(c{1}); end, end
+for c = {'Kp', 'Ki', 'Usat'}, if ~isempty(o.(c{1})), ovr.(c{1}) = o.(c{1}); end, end
 if ~isempty(o.NoIdeal)
     ovr.en_lin = o.NoIdeal(1); ovr.en_hist = o.NoIdeal(2); ovr.en_q = o.NoIdeal(3);
     if numel(o.NoIdeal) > 3, ovr.en_ruido = o.NoIdeal(4); else, ovr.en_ruido = 0; end
@@ -50,23 +52,22 @@ evalin('base', sprintf('run(''%s'')', fullfile(here, 'iniciar_pil3.m')));   % el
 load_system(mdl);
 
 % Estado original, para restaurarlo al terminar (o si algo falla)
-bR = [mdl '/Gain']; bP = [mdl '/Gain1']; bHs = [mdl '/P-M SPECTRUM/Constant1']; bTp = [mdl '/P-M SPECTRUM/Constant2'];
+bHs = [mdl '/P-M SPECTRUM/Constant1']; bTp = [mdl '/P-M SPECTRUM/Constant2'];
 ph = get_param([mdl '/PLATO SUPERIOR DEL ROBOT'], 'PortHandles');
 pRoll = ph.Outport(1); pPitch = ph.Outport(3);         % Roll_X_cal, Pitch_Y_cal
 pU = get_param([mdl '/Controlador'], 'PortHandles').Outport(1);   % comando de las tres válvulas
-ant = {get_param(bR,'Gain'), get_param(bP,'Gain'), get_param(bHs,'Value'), get_param(mdl,'SignalLogging'), ...
-       get_param(pRoll,'DataLogging'), get_param(pPitch,'DataLogging'), get_param(mdl,'StopTime'), get_param(pU,'DataLogging'), get_param(bTp,'Value')};
-limpiar = onCleanup(@() restaurar(mdl, bR, bP, bHs, bTp, pRoll, pPitch, pU, ant)); %#ok<NASGU>
+ant = {get_param(bHs,'Value'), get_param(mdl,'SignalLogging'), get_param(pRoll,'DataLogging'), ...
+       get_param(pPitch,'DataLogging'), get_param(mdl,'StopTime'), get_param(pU,'DataLogging'), get_param(bTp,'Value')};
+limpiar = onCleanup(@() restaurar(mdl, bHs, bTp, pRoll, pPitch, pU, ant)); %#ok<NASGU>
 
-set_param(bR, 'Gain', num2str(o.K)); set_param(bP, 'Gain', num2str(o.K));
 set_param(bHs, 'Value', num2str(o.Hs)); set_param(bTp, 'Value', num2str(o.Tp));
 set_param(mdl, 'SignalLogging', 'on', 'SignalLoggingName', 'logsout', 'StopTime', num2str(o.Tsim));
 set_param(pRoll,  'DataLogging', 'on', 'DataLoggingNameMode', 'Custom', 'DataLoggingName', 'roll_mesa');
 set_param(pPitch, 'DataLogging', 'on', 'DataLoggingNameMode', 'Custom', 'DataLoggingName', 'pitch_mesa');
 set_param(pU,     'DataLogging', 'on', 'DataLoggingNameMode', 'Custom', 'DataLoggingName', 'u_valvulas');
 
-fprintf('%s | Kp=%g Ki=%g Usat=%g | K=%g Hs=%g Tp=%g | no idealidades [lin hist q ruido] = [%d %d %d %d]\n', ...
-    upper(modo), evalin('base','Kp'), evalin('base','Ki'), evalin('base','Usat'), o.K, o.Hs, o.Tp, ...
+fprintf('%s | Kp=%g Ki=%g Usat=%g | Hs=%g Tp=%g | no idealidades [lin hist q ruido] = [%d %d %d %d]\n', ...
+    upper(modo), evalin('base','Kp'), evalin('base','Ki'), evalin('base','Usat'), o.Hs, o.Tp, ...
     evalin('base','en_lin'), evalin('base','en_hist'), evalin('base','en_q'), evalin('base','en_ruido'));
 tic;
 try
@@ -107,9 +108,9 @@ function [t, x] = leer(lg, nombre)
 s = lg.getElement(nombre); t = s.Values.Time; x = squeeze(s.Values.Data);
 end
 
-function restaurar(mdl, bR, bP, bHs, bTp, pRoll, pPitch, pU, a)
-set_param(bR, 'Gain', a{1}); set_param(bP, 'Gain', a{2}); set_param(bHs, 'Value', a{3}); set_param(bTp, 'Value', a{9});
-set_param(pRoll, 'DataLogging', a{5}); set_param(pPitch, 'DataLogging', a{6});
-set_param(pU, 'DataLogging', a{8});
-set_param(mdl, 'SignalLogging', a{4}, 'StopTime', a{7});
+function restaurar(mdl, bHs, bTp, pRoll, pPitch, pU, a)
+set_param(bHs, 'Value', a{1}); set_param(bTp, 'Value', a{7});
+set_param(pRoll, 'DataLogging', a{3}); set_param(pPitch, 'DataLogging', a{4});
+set_param(pU, 'DataLogging', a{6});
+set_param(mdl, 'SignalLogging', a{2}, 'StopTime', a{5});
 end

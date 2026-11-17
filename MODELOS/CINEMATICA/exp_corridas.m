@@ -2,7 +2,8 @@ function T = exp_corridas(corridas, archivo, varargin)
 % EXP_CORRIDAS  Ejecuta una tabla de corridas de correr_pil3 y guarda las métricas tras cada una.
 %   T = exp_corridas(corridas, 'exp2_final', 'Hs', 2)      (ver exp2_final.m)
 % corridas: tabla con columnas id (string), modo ('mil'|'pil'), K, Kp, Ki, Usat y, opcional,
-%   noideal (fila [lin hist q ruido]; por defecto sensor ideal) y Kff (prealimentación; por defecto 0).
+%   noideal (fila [lin hist q ruido]; por defecto sensor ideal). Las columnas K y Kff se guardan pero ya
+%   no actúan: desde la arquitectura B el modelo no tiene lazo de nivelación (los exp2-exp9 son históricos).
 % Guarda DOCS/AVANCES/AVANCE 3/resultados/<archivo>.mat (con las señales) y .csv (métricas).
 % Si <archivo>.mat ya existe, omite las corridas hechas (se puede reanudar tras una falla).
 % Opciones (nombre, valor): 'TMax' (600 s: corte de una corrida, informativo), 'Tsim' (30), 'Hs' (2), 'Tp' (10).
@@ -27,8 +28,8 @@ for i = 1:height(corridas)
     r.Kff = kff;
     t0 = tic;
     try
-        res = correr_pil3(char(c.modo), 'K', c.K, 'Kp', c.Kp, 'Ki', c.Ki, 'Usat', c.Usat, ...
-            'Hs', o.Hs, 'Tp', o.Tp, 'Tsim', o.Tsim, 'NoIdeal', ni, 'Kff', kff, 'Figura', false);
+        res = correr_pil3(char(c.modo), 'Kp', c.Kp, 'Ki', c.Ki, 'Usat', c.Usat, ...
+            'Hs', o.Hs, 'Tp', o.Tp, 'Tsim', o.Tsim, 'NoIdeal', ni, 'Figura', false);
         r.res = res; r.estable = true;
     catch err
         % errores de código (no de la simulación) detienen el lote: no son corridas inestables
