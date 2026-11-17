@@ -7,32 +7,24 @@
 \usepackage{booktabs}
 \usepackage{array}
 \usepackage{tabularx}
-\usepackage{float}      % habilita [H]: la figura/tabla queda exactamente donde se escribe
+\usepackage{float}
 \usepackage{siunitx}
 \usepackage{xcolor}
 \usepackage{hyperref}
 
 \sisetup{output-decimal-marker={.}}
-\graphicspath{{figuras/}{../../../MODELOS/PISTON/figuras/}}
+\graphicspath{{figuras/}}
 
-% Columnas para tabularx: X = ajusta al ancho disponible y parte líneas
 \newcolumntype{L}{>{\raggedright\arraybackslash}X}
 \newcolumntype{C}{>{\centering\arraybackslash}X}
 \renewcommand{\arraystretch}{1.15}
 
 % Marcas de trabajo pendiente: se buscan con "PENDIENTE" antes de entregar
 \newcommand{\pendiente}[1]{\textcolor{red}{[PENDIENTE: #1]}}
-\newcommand{\figpendiente}[2]{%
-  \fbox{\parbox[c][#1][c]{0.95\columnwidth}{\centering\textcolor{red}{[FIGURA PENDIENTE]}\\\small #2}}}
-
-% REGLAS DE LA PLANTILLA (las mismas del informe de la validación unitaria)
-% - Toda tabla usa tabularx con ancho \columnwidth.
-% - Toda figura y tabla usa [H].
-% - Las imágenes van con width=\columnwidth (o menos); figure* para las anchas.
 
 \begin{document}
 
-\title{MARLUP: Actividad 3 -- Processor-in-the-Loop\\de la plataforma completa}
+\title{MARLUP: Processor-in-the-Loop\\de una plataforma de nivelación con tres cilindros hidráulicos}
 
 \author{
 \IEEEauthorblockN{Aarón Salas Alvarado, Mónica Solís Murillo, Eduardo Valle Arriola}
@@ -42,276 +34,129 @@ Laboratorio de Control Automático, Prof. Adolfo Chaves Jiménez}
 
 \maketitle
 
-% =====================================================================
-% 150--200 palabras al final: qué se hizo, resultado principal con números,
-% causa principal de la degradación.
 \begin{abstract}
-Se extendió la validación \textit{Processor-in-the-Loop} (PiL) de MARLUP, una plataforma de nivelación con tres cilindros hidráulicos, de un actuador a la planta completa. La plataforma, el oleaje de Pierson--Moskowitz ($H_s=\SI{2}{m}$, $T_p=\SI{10}{s}$) y los actuadores se simulan en Simulink, y los tres controladores PI de posición se ejecutan en un Arduino UNO con código generado por Embedded Coder. La función de transferencia del actuador se identificó sobre el modelo no lineal, y con ella se diseñó un único PI ($K_p=20$, $K_i=1$) que cumple las especificaciones de respuesta al escalón ($M_p=\SI{2.4}{\percent}$, $t_s=\SI{0.28}{s}$) con márgenes de \SI{16.9}{dB} y \SI{73.7}{\degree}. Se corrigió la cinemática inversa, con la que la mesa realizaba solo el \SI{19}{\percent} del ángulo ordenado porque giraba sobre el centro de la base y no sobre el suyo. Con la ganancia corregida a 1, el lazo de nivelación combina la prealimentación de la inclinación de la base con una realimentación de ganancia $K=3$. La inclinación pico de la mesa baja de \SI{2.88}{\degree} a \SI{0.13}{\degree} en \textit{pitch} y de \SI{1.52}{\degree} a \SI{0.06}{\degree} en \textit{roll} (\SI{-28}{dB}), frente a los \SI{0.73}{\degree} de la realimentación sola, y el PiL reproduce al \textit{Model-in-the-Loop} (MiL) con error nulo. Con cuatro no idealidades del encoder lineal, modeladas en la realimentación (linealidad, histéresis, ADC de 10 bits y ruido de 5 LSB), el pico sube a \SI{0.25}{\degree}. Con oleajes más empinados ($T_p$ más corto), el controlador cumple el requisito con una base de \SI{5}{\degree}, pero con \SIlist{10;15}{\degree} la ola exige a los cilindros más velocidad de la que dan sus válvulas y la plataforma pierde la nivelación.
+MARLUP mantiene horizontal una mesa montada sobre una base que mueve el oleaje. Este trabajo valida su controlador con un esquema \textit{Processor-in-the-Loop} (PiL): la plataforma, el oleaje y los tres actuadores hidráulicos se simulan en Simulink, y los tres controladores PI de posición corren en un Arduino UNO con código generado por Embedded Coder. Un IMU en la base mide su inclinación y la cinemática inversa ordena a la mesa la rotación contraria. El PI se diseñó sobre la función de transferencia identificada del actuador: con $K_p=27.5$ y $K_i=1$ el sobreimpulso es de \SI{7.5}{\percent} y el tiempo de establecimiento de \SI{0.21}{s}. Con un oleaje de $H_s=\SI{2}{m}$, la inclinación pico de la mesa baja de \SI{2.87}{\degree} a \SI{0.35}{\degree}, el PiL reproduce exactamente la simulación en el PC y, con cuatro no idealidades del encoder, llega a \SI{0.44}{\degree}, por debajo del requisito de \SI{1}{\degree}.
 \end{abstract}
 
 \begin{IEEEkeywords}
-Processor-in-the-Loop, control hidráulico, plataforma de nivelación, oleaje, MARLUP.
+Processor-in-the-Loop, control hidráulico, prealimentación, plataforma de nivelación, oleaje.
 \end{IEEEkeywords}
 
 % =====================================================================
 \section{Introducción}
-% Del PiL unitario (un pistón) al PiL de la planta completa.
-MARLUP es una plataforma que nivela su mesa (\textit{roll} y \textit{pitch}) frente al movimiento de una base excitada por el oleaje, mediante tres cilindros hidráulicos \cite{wang2025}. En una primera etapa se validó el controlador de posición de un solo actuador mediante un esquema \textit{Processor-in-the-Loop} (PiL), con resultados documentados en el informe de validación unitaria \cite{pil_unitario}. En la presentación se solicitó extender el PiL a la planta completa: los tres controladores de posición se ejecutan en un mismo microcontrolador mientras la plataforma, el oleaje y los actuadores se simulan en Simulink. Este informe documenta esa integración.
-
-El objetivo es verificar que el controlador de los tres actuadores, ejecutado en el microcontrolador, mantiene la mesa nivelada frente a un oleaje que inclina la base varios grados. El requisito de desempeño es mantener la inclinación de la mesa por debajo de \SI{1}{\degree} en \textit{roll} y en \textit{pitch} con un oleaje de $H_s=\SI{2}{m}$.
-
-La Sec.~\ref{sec:correcciones} responde a las observaciones de la presentación. La Sec.~\ref{sec:modelo} presenta el modelo de la planta, la función de transferencia del actuador y el diseño del controlador. Las Secs.~\ref{sec:interfaz}, \ref{sec:control} y \ref{sec:pil} describen la interfaz con el microcontrolador, la implementación del controlador y la arquitectura PiL. Las Secs.~\ref{sec:ideal} y \ref{sec:noideal} presentan las implementaciones con sensores ideales y no ideales, y la Sec.~\ref{sec:resultados} las compara.
+MARLUP es una plataforma que nivela su mesa en \textit{roll} y \textit{pitch} frente al movimiento de una base excitada por el oleaje, con tres cilindros hidráulicos. El objetivo de esta actividad es ejecutar el controlador en un microcontrolador real mientras la planta se simula, y verificar que la mesa se mantiene por debajo de \SI{1}{\degree} con un oleaje de $H_s=\SI{2}{m}$. El controlador de un solo actuador ya se había validado así \cite{pil_unitario}; aquí se integran los tres.
 
 % =====================================================================
 \section{Correcciones de la presentación}
 \label{sec:correcciones}
-% Criterio R1: cada observación con su acción y su evidencia.
 \begin{table}[H]
 \centering
 \caption{Observaciones de la presentación y acciones tomadas}
 \label{tab:correcciones}
 \small
-\begin{tabularx}{\columnwidth}{LLL}
+\begin{tabularx}{\columnwidth}{LLl}
 \toprule
 Observación & Acción & Evidencia \\
 \midrule
-El PiL incluía un solo pistón & Se integraron los tres controladores en un solo MCU, con un único bloque Model en modo PIL y código generado por Embedded Coder & Secs.~\ref{sec:pil} y \ref{sec:ideal} \\
-\pendiente{observación} & \pendiente{acción} & \pendiente{sección} \\
+El PiL incluía un solo pistón & Los tres PI corren en el mismo MCU, en un único bloque Model en modo PIL & Sec.~\ref{sec:pil} \\
+El PI se había sintonizado a mano & Se identificó $G(s)$ del actuador y el PI se diseñó con sobreimpulso, tiempo de establecimiento, error en régimen y márgenes & Sec.~\ref{sec:pi}, Tabla~\ref{tab:escalon} \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
 % =====================================================================
-\section{Modelo matemático de la planta}
-\label{sec:modelo}
-% Criterio C1: consistente con la Actividad 2, parámetros, unidades y puntos de operación.
+\section{El sistema}
+\label{sec:sistema}
 
-\subsection{Arquitectura del sistema}
-La Fig.~\ref{fig:cascada} resume el sistema. El oleaje mueve la base en \textit{heave}, \textit{pitch} y \textit{roll} ($z_b$, $\theta_b$, $\alpha_b$). Un lazo exterior de nivelación calcula la orientación que debe tener la mesa respecto de la base; la cinemática inversa la convierte en la elongación de referencia de cada cilindro, y tres lazos PI de posición, uno por actuador, mueven los cilindros. La plataforma se modela en Simscape Multibody, que devuelve a cada actuador su fuerza de carga $F_{L,i}$.
+\subsection{Arquitectura}
+La Fig.~\ref{fig:arquitectura} resume el sistema. Un IMU en la base mide su inclinación ($\alpha_b$, $\theta_b$), la cinemática inversa calcula la longitud que debe tener cada cilindro para que la mesa quede horizontal, y tres lazos PI de posición, uno por cilindro, llevan cada vástago a su referencia. Es una prealimentación pura, el esquema usual en compensación activa de oleaje \cite{wang2025}: la mesa no necesita medirse para nivelarse.
 
 \begin{figure*}[t]
 \centering
-\includegraphics[width=\textwidth]{fig3_cascada.pdf}
-\caption{Estructura en cascada de MARLUP con el controlador final: la inclinación de la base, medida por un IMU, se prealimenta con $-K_{ff}$, y el ángulo medido de la mesa se realimenta con la ganancia $K$ (Sec.~\ref{sec:ganancias}); el comando saturado pasa por la cinemática inversa a los tres lazos PI de posición, que se ejecutan en el Arduino, y la plataforma devuelve a cada actuador su fuerza de carga $F_{L,i}$. Generada con \texttt{figuras/fig3\_cascada.tex}.}
-\label{fig:cascada}
+\includegraphics[width=0.95\textwidth]{fig3_cascada.pdf}
+\caption{Arquitectura de MARLUP. La inclinación de la base, medida por un IMU, entra a la cinemática inversa, que ordena a la mesa la rotación inversa de la base; los tres PI de posición corren en el Arduino y la plataforma, simulada en Simscape Multibody, devuelve a cada actuador su fuerza de carga $F_{L,i}$.}
+\label{fig:arquitectura}
 \end{figure*}
 
-En el modelo de Simulink (\texttt{Model\_aaronC.slx}), el comando de orientación combina la prealimentación de la inclinación de la base, que mediría un IMU montado en ella, con una realimentación proporcional sobre el ángulo medido de la mesa:
-\begin{equation}
-\begin{aligned}
-\alpha_c &= \operatorname{sat}_{\pm\SI{30}{\degree}}\!\big(-K_{ff}\,\alpha_b+K(\alpha_{ref}-\alpha)\big),\\
-\theta_c &= \operatorname{sat}_{\pm\SI{30}{\degree}}\!\big(-K_{ff}\,\theta_b+K(\theta_{ref}-\theta)\big),
-\end{aligned}
-\label{eq:lazo_ext}
-\end{equation}
-con $K_{ff}=1$, $K=3$, $\alpha_{ref}=\theta_{ref}=0$ y los comandos en radianes. La prealimentación ordena a la mesa, respecto de la base, el ángulo contrario al de la base, y la realimentación corrige lo que queda. El lazo de \textit{heave} está desactivado ($K_z=0$), de modo que la altura comandada es la nominal $z_c=Z_0$.
-
-\subsection{Oleaje: espectro de Pierson--Moskowitz}
-El estado de mar se describe con el espectro de Pierson--Moskowitz \cite{pierson1964} expresado con la altura significativa $H_s$ y el periodo pico $T_p$:
+\subsection{Oleaje}
+El mar se describe con el espectro de Pierson--Moskowitz \cite{pierson1964},
 \begin{equation}
 S(f)=\frac{5}{16}\,H_s^2\,f_p^4\,f^{-5}\exp\!\left[-\frac{5}{4}\left(\frac{f_p}{f}\right)^{4}\right],\qquad f_p=\frac{1}{T_p},
 \label{eq:pm}
 \end{equation}
-con $H_s=\SI{2}{m}$ (estado de mar 4) y $T_p=\SI{10}{s}$. La superficie se sintetiza como una suma de $N=100$ frecuencias entre $\Delta f$ y $4f_p$ y $M=50$ direcciones, con fases aleatorias $\varphi_{nm}$ fijas (semilla 42, para que todas las corridas vean el mismo mar):
-\begin{equation}
-\eta(x,y,t)=\sum_{n=1}^{N}\sum_{m=1}^{M}A_{nm}\cos\!\big(\mathbf{k}_{nm}\!\cdot\mathbf{r}-\omega_n t+\varphi_{nm}\big),
-\label{eq:eta}
-\end{equation}
-\begin{equation}
-A_{nm}=\sqrt{2\,S(f_n)\,D(\beta_m)\,\Delta f\,\Delta\beta},\qquad k_n=\frac{\omega_n^2}{g},
-\end{equation}
-donde $\mathbf{r}=(x,y)$, $\mathbf{k}_{nm}=k_n(\cos\beta_m,\sin\beta_m)$, $k_n$ sale de la relación de dispersión en aguas profundas y $D(\beta)=\frac{2}{\pi}\cos^{2s}(\beta/2)$, con $s=10$, es la dispersión direccional. El movimiento de la base se toma en el origen: el \textit{heave} es $z_b=\eta(0,0,t)$ y los ángulos son las pendientes de la superficie,
+con $H_s=\SI{2}{m}$ (estado de mar 4) y $T_p=\SI{10}{s}$. La superficie $\eta(x,y,t)$ se sintetiza como una suma de 100 frecuencias y 50 direcciones con fases aleatorias fijas, para que todas las corridas vean el mismo mar. La base se apoya en el plano tangente a la superficie en el origen, así que su inclinación es la pendiente del mar:
 \begin{equation}
 \theta_b=-\arctan\frac{\partial\eta}{\partial x}\Big|_{0},\qquad \alpha_b=-\arctan\frac{\partial\eta}{\partial y}\Big|_{0}.
 \label{eq:pendientes}
 \end{equation}
-Es decir, la base de la plataforma se apoya en el plano tangente a la superficie del mar en el origen: su eje $z_b$ es la normal a $\eta$ en ese punto, y la perturbación que ve el lazo de nivelación son las derivadas parciales de la superficie, evaluadas allí en cada instante. La Fig.~\ref{fig:espectro} muestra el espectro, su discretización, una realización de la superficie y ese plano tangente con el marco de la base.
+Sin compensar, la mesa sigue a la base y llega a \SI{2.87}{\degree} en \textit{pitch}, casi el triple del requisito (Fig.~\ref{fig:espectro}).
 
 \begin{figure*}[t]
 \centering
 \includegraphics[width=0.9\textwidth]{espectro_pm.pdf}
-\caption{Oleaje de Pierson--Moskowitz con $H_s=\SI{2}{m}$ y $T_p=\SI{10}{s}$. Izquierda: espectro discreto del modelo, una línea $S(f_n)$ por cada una de las 100 frecuencias de la suma finita~\eqref{eq:eta} (puntos); la curva punteada es el espectro continuo~\eqref{eq:pm} como referencia. Centro: superficie $\eta(x,y,t^*)$ de la misma realización que ve la simulación, en el instante $t^*$ del pico de \textit{pitch} de la base, con el marco de la base $(x_b,y_b,z_b)$ en el punto de medición; escala vertical exagerada. Derecha: detalle del plano tangente en $(0,0)$: sus pendientes $\partial\eta/\partial x$ y $\partial\eta/\partial y$ son la perturbación~\eqref{eq:pendientes} que recibe la plataforma. Generada con \texttt{figuras/fig\_espectro\_pm.m}.}
+\caption{Oleaje con $H_s=\SI{2}{m}$ y $T_p=\SI{10}{s}$. Izquierda: espectro~\eqref{eq:pm} y las 100 frecuencias de la síntesis. Centro: una realización de la superficie con el marco de la base en el origen (escala vertical exagerada). Derecha: el plano tangente en el origen, cuyas pendientes~\eqref{eq:pendientes} inclinan la base.}
 \label{fig:espectro}
 \end{figure*}
 
-\pendiente{Revisar la dispersión direccional del bloque \texttt{P-M SPECTRUM}: como $\beta\in(0,2\pi]$, el recorte \texttt{theta > pi/2} deja activas solo las direcciones entre \SI{0}{\degree} y \SI{90}{\degree}, y $\int D\,d\beta\approx0.31$ en lugar de 1. La superficie simulada tiene $4\sigma_\eta=4\sqrt{\sum A_{nm}^2/2}\approx\SI{1.12}{m}$ en lugar de $H_s=\SI{2}{m}$; por eso se usa $H_s=\SI{2}{m}$, para tener una perturbación considerable.}
-
-Con este estado de mar y el lazo de nivelación apagado ($K=0$), la mesa sigue a la base y se inclina hasta \SI{2.88}{\degree} en \textit{pitch} (\SI{1.43}{\degree} RMS) y hasta \SI{1.52}{\degree} en \textit{roll} (\SI{0.56}{\degree} RMS), casi el triple del requisito.
-
 \subsection{Cinemática inversa}
-En el ensamble, cada pata une la base con una junta universal y la mesa con un único pasador tangencial, de modo que el eje de cada vástago queda en el plano radial de su anclaje inferior. Con las tres patas así restringidas, la mesa gira alrededor del centro de la base y no de su propio centro. Por eso su pose respecto de la base es
+Cada pata une la base con una junta universal y la mesa con un pasador, así que la mesa gira alrededor del centro de la base. Para dejarla horizontal se le ordena, respecto de la base, la rotación inversa de la base, $R_b^{\top}=R_y(-\theta_b)\,R_x(-\alpha_b)$, y la longitud de cada cilindro es la distancia entre sus anclajes (Fig.~\ref{fig:cinematica}):
 \begin{equation}
-T_0^P=R_y(\theta)\,R_x(\alpha)\,\operatorname{Trasl}(0,0,z),
-\end{equation}
-y la longitud del cilindro $i$ es la distancia entre sus anclajes:
-\begin{equation}
-\ell_i=\big\lVert R_y(\theta)R_x(\alpha)\,\big(\mathbf{p}_i+z\,\hat{\mathbf{k}}\big)-\mathbf{b}_i\big\rVert,\qquad i=1,2,3,
+\ell_i=\big\lVert R_b^{\top}\big(\mathbf{p}_i+Z_0\hat{\mathbf{k}}\big)-\mathbf{b}_i\big\rVert,\qquad x_{ref,i}=\ell_i-\ell_0+x_0,
 \label{eq:ik}
 \end{equation}
-con $\mathbf{b}_i=R_B(\cos\phi_i,\sin\phi_i,0)$ y $\mathbf{p}_i=R_T(\cos\phi_i,\sin\phi_i,0)$, $\phi_i\in\{\SI{-30}{\degree},\SI{90}{\degree},\SI{210}{\degree}\}$. La longitud del cilindro es la norma del vector $\mathbf{d}_i=\mathbf{p}_i-\mathbf{b}_i$ entre ambos anclajes (Fig.~\ref{fig:cinematica}).
-
-En los avances anteriores se usaba $T_0^P=\operatorname{Trasl}(0,0,z)\,R_y(\theta)\,R_x(\alpha)$, que supone que la mesa gira sobre su propio centro, con brazo $R_T$. Como el mecanismo gira con brazo $R_B$, la mesa realizaba solo $R_T/R_B=0.188$ del ángulo ordenado, el \SI{18}{\percent} que ya se había observado en la validación de la cinemática inversa \cite{avance2}. Con~\eqref{eq:ik}, un escalón de \SI{1}{\degree} en la referencia, con el mar en calma, da una ganancia de \num{1.007} en \textit{roll} y \num{1.003} en \textit{pitch}. La geometría se midió en el ensamblaje CAD (Tabla~\ref{tab:geometria}).
+con $\mathbf{b}_i=R_B(\cos\phi_i,\sin\phi_i,0)$, $\mathbf{p}_i=R_T(\cos\phi_i,\sin\phi_i,0)$ y $\phi_i\in\{\SI{-30}{\degree},\SI{90}{\degree},\SI{210}{\degree}\}$. La geometría se midió en el ensamble CAD: $R_B=\SI{0.761}{m}$, $R_T=\SI{0.143}{m}$, $Z_0=\SI{1.377}{m}$ y $\ell_0=\SI{1.509}{m}$. La posición de trabajo $x_0=\SI{0.23}{m}$ deja cada vástago a media carrera. Cerca de la pose nominal, un grado de inclinación pide hasta \SI{12}{mm} de elongación.
 
 \begin{figure*}[t]
 \centering
-\includegraphics[width=0.9\textwidth]{cinematica.pdf}
-\caption{Modelo cinemático de MARLUP. (a) Marco de la base $\{0\}$, de la mesa $\{P\}$ y de los anclajes inferiores $\{B_i\}$ y superiores $\{A_i\}$, en la pose nominal; los cilindros definen las longitudes $L_1$, $L_2$ y $L_3$. (b) Construcción vectorial de~\eqref{eq:ik} sobre la pata 1: $\mathbf{b}_1$ ubica el anclaje inferior (fijo), $\mathbf{p}_1$ el superior (móvil con la pose) y $L_1$ es la norma de su diferencia; $\mathbf{n}_P$ es la normal de la mesa. Ejes $x$, $y$, $z$ de cada marco en rojo, verde y azul. Generada con \texttt{figuras/fig\_cinematica.m}.}
+\includegraphics[width=0.85\textwidth]{cinematica.pdf}
+\caption{Modelo cinemático. (a) Marcos de la base $\{0\}$ y de la mesa $\{P\}$ y longitudes de los cilindros en la pose nominal. (b) Construcción de~\eqref{eq:ik} sobre la pata 1: $\mathbf{b}_1$ es el anclaje inferior, $\mathbf{p}_1$ el superior y $L_1$ la norma de su diferencia.}
 \label{fig:cinematica}
-\end{figure*} La referencia de cada lazo de posición es
-\begin{equation}
-x_{ref,i}=\ell_i-\ell_0+x_0,\qquad \ell_0=\sqrt{(R_B-R_T)^2+Z_0^2},
-\end{equation}
-donde $x_0=\SI{0.23}{m}$ ubica cada vástago cerca de la mitad de su carrera de \SI{0.45}{m}, de modo que puede extenderse o retraerse.
+\end{figure*}
 
-\begin{table}[H]
-\centering
-\caption{Geometría de los anclajes}
-\label{tab:geometria}
-\small
-\begin{tabularx}{\columnwidth}{lLr}
-\toprule
-Símbolo & Descripción & Valor \\
-\midrule
-$R_B$ & Radio de los anclajes inferiores & \SI{0.7608}{m} \\
-$R_T$ & Radio de los anclajes superiores & \SI{0.143}{m} \\
-$Z_0$ & Separación vertical nominal & \SI{1.377}{m} \\
-$\ell_0$ & Longitud nominal entre rótulas & \SI{1.509}{m} \\
-$x_0$ & Posición de trabajo del vástago & \SI{0.23}{m} \\
-\bottomrule
-\end{tabularx}
-\end{table}
+\subsection{Actuador y diseño del PI}
+\label{sec:pi}
+Cada actuador es un cilindro de doble efecto Bosch Rexroth CDH1 de \SI{40}{mm} de pistón y \SI{28}{mm} de vástago \cite{rexroth}, con una válvula proporcional 4/3 y suministro de \SI{160}{bar} (Fig.~\ref{fig:hidraulico}). El modelo de Simscape incluye la ecuación de orificio de la válvula, la compresibilidad del aceite en cada cámara y la masa móvil de \SI{20}{kg} con fricción viscosa \cite{merritt}.
 
-Linealizando \eqref{eq:ik} en la pose nominal se obtiene el jacobiano que relaciona ángulos de la mesa con elongaciones:
-\begin{equation}
-\Delta\boldsymbol{\ell}\approx
-\underbrace{\begin{bmatrix}-0.347 & -0.601 & 0.912\\ 0.694 & 0 & 0.912\\ -0.347 & 0.601 & 0.912\end{bmatrix}}_{J}
-\begin{bmatrix}\Delta\alpha\\ \Delta\theta\\ \Delta z\end{bmatrix},
-\label{eq:jacobiano}
-\end{equation}
-con $\Delta\alpha$, $\Delta\theta$ en radianes y $\Delta\boldsymbol{\ell}$, $\Delta z$ en metros. Un grado de inclinación exige hasta \SI{12}{mm} de elongación en la pata más exigida, y la velocidad de inclinación que puede seguir la mesa queda limitada por la velocidad máxima de los cilindros (Sec.~\ref{sec:oleaje}).
-
-\subsection{Actuador electrohidráulico}
-Cada actuador es un cilindro de doble efecto Bosch Rexroth CDH1 de \SI{40}{mm} de pistón y \SI{28}{mm} de vástago \cite{rexroth}, comandado por una válvula proporcional 4/3 (Fig.~\ref{fig:hidraulico}). El modelo es el mismo de la validación unitaria \cite{pil_unitario} y se resume en la Fig.~\ref{fig:bloques}.
-
-\begin{figure}[H]
+\begin{figure}[t]
 \centering
 \includegraphics[width=0.85\columnwidth]{fig1_esquema_hidraulico.png}
-\caption{Esquema hidráulico de un actuador. \pendiente{corregir la etiqueta: el cilindro es Ø40/28, no Ø63/36.}}
+\caption{Esquema hidráulico de un actuador.}
 \label{fig:hidraulico}
 \end{figure}
 
-\begin{figure*}[t]
-\centering
-\includegraphics[width=\textwidth]{fig2_bloques_actuador.png}
-\caption{Diagrama de bloques del lazo de posición de un actuador.}
-\label{fig:bloques}
-\end{figure*}
-
-\textit{Válvula.} Se modela como un sistema de primer orden con retardo, y el caudal por cada orificio sigue la ecuación de orificio:
+\textit{Modelo.} Con escalones de $\pm0.02$, $\pm0.05$ y $\pm0.1$ en la válvula, aplicados al modelo no lineal en $x_0$, la velocidad del vástago se establece en unos \SI{25}{ms} sin oscilar. El actuador queda descrito por un integrador con un retardo y una constante de tiempo:
 \begin{equation}
-\tau_v\dot x_v+x_v=u,\qquad Q=C_d\,a(x_v)\sqrt{2|\Delta p|/\rho}\,\operatorname{sgn}(\Delta p).
-\end{equation}
-
-\textit{Cámaras.} La continuidad con compresibilidad del aceite da
-\begin{equation}
-\dot p_A=\frac{\beta_e}{V_A(x)}\big(Q_A-A_A\dot x\big),\qquad
-\dot p_B=\frac{\beta_e}{V_B(x)}\big(Q_B+A_B\dot x\big).
-\end{equation}
-
-\textit{Carga.} El balance de fuerzas sobre la masa móvil es
-\begin{equation}
-m_L\ddot x=A_Ap_A-A_Bp_B-F_f(\dot x)-F_L,
-\end{equation}
-donde $F_L$ es la fuerza que impone la plataforma (Simscape Multibody). La Tabla~\ref{tab:hidraulica} reúne los parámetros, tomados de \texttt{MARLUP\_hydr\_params.m}.
-
-\begin{table}[H]
-\centering
-\caption{Parámetros del actuador}
-\label{tab:hidraulica}
-\small
-\begin{tabularx}{\columnwidth}{lLr}
-\toprule
-Símbolo & Descripción & Valor \\
-\midrule
-$m_L$ & Masa móvil por actuador & \SI{20}{kg} \\
-$b$ & Fricción viscosa & \SI{1000}{N.s/m} \\
-$\beta_e$ & Módulo de compresibilidad efectivo & \SI{750}{MPa} \\
-$A_A$, $A_B$ & Áreas del lado del pistón y del vástago & \SI{12.57}{cm^2}, \SI{6.41}{cm^2} \\
-$V_{A0}$, $V_{B0}$ & Volúmenes muertos & \SI{0.30}{L}, \SI{0.15}{L} \\
-$p_s$ & Presión de suministro & \SI{160}{bar} \\
-$Q_N$ & Caudal nominal de la válvula (a \SI{35}{bar}) & \SI{40}{L/min} \\
-$\tau_v$ & Constante de tiempo de la válvula (más \SI{1}{ms} de retardo) & \SI{2}{ms} \\
-\bottomrule
-\end{tabularx}
-\end{table}
-
-\textit{Función de transferencia.} Alrededor de $\dot x_0=0$, con volúmenes $V_{A0}$, $V_{B0}$, fricción viscosa $F_f\approx b\dot x$ y los coeficientes de la válvula $K_q=\partial Q/\partial x_v$ y $K_c=-\partial Q/\partial p$, la función de transferencia de comando a posición es
-\begin{equation}
-G(s)=\frac{X(s)}{U(s)}=\frac{K_q\big[(A_AC_B+A_BC_A)s+K_c(A_A+A_B)\big]}{s\,(\tau_vs+1)\,\Delta(s)},
+G(s)=\frac{X(s)}{U(s)}=\frac{0.636\,e^{-0.0088s}}{s\,(0.0085s+1)},
 \label{eq:G}
 \end{equation}
-\begin{multline}
-\Delta(s)=(m_Ls+b)(C_As+K_c)(C_Bs+K_c)\\+A_A^2(C_Bs+K_c)+A_B^2(C_As+K_c),
-\end{multline}
-con $C_{A,B}=V_{A0,B0}/\beta_e$. La planta tiene un integrador: un comando constante produce una velocidad constante del vástago.
+donde \SI{0.636}{m/s} es el promedio de extensión y retracción (\num{0.740} y \SI{0.532}{m/s}), que difieren por las áreas del cilindro.
 
-Los parámetros de~\eqref{eq:G} se obtuvieron con un ensayo en lazo abierto sobre el modelo no lineal de Simulink, en el punto de trabajo de la plataforma ($x_0=\SI{0.23}{m}$): escalones de $u=\pm0.02$, $\pm0.05$ y $\pm0.1$ en la válvula y medición de la velocidad del vástago. La velocidad se establece en unos \SI{25}{ms} sin oscilar, de modo que la dinámica hidráulica queda bien representada por un retardo y una constante de tiempo, y~\eqref{eq:G} se reduce a
+\textit{Requisitos.} Para el lazo de posición se fijaron: sobreimpulso $M_p\le\SI{10}{\percent}$, tiempo de establecimiento $t_s\le\SI{2}{s}$ (criterio del \SI{2}{\percent}), error en régimen $|e_{ss}|<\SI{2.3}{mm}$, margen de ganancia $\ge\SI{10}{dB}$ y margen de fase $\ge\SI{60}{\degree}$.
+
+\textit{Diseño.} Se usa un PI $C(s)=K_p+K_i/s$ con integrador trapezoidal, anti-windup por \textit{clamping} y comando saturado en $\pm1$. Como la planta ya integra, el lazo abierto es de tipo 2 y el error ante escalones y rampas es nulo. Con prealimentación pura, lo que queda de inclinación en la mesa es el atraso de los cilindros al seguir la ola, así que conviene el lazo más rápido que cumpla los requisitos. Ese es
 \begin{equation}
-G(s)\approx\frac{K_v\,e^{-\theta s}}{s\,(\tau s+1)}=\frac{0.636\,e^{-0.0088s}}{s\,(0.0085s+1)},
-\label{eq:Gid}
-\end{equation}
-con los valores de la Tabla~\ref{tab:lineal}. El diseño usa~\eqref{eq:Gid} discretizada con retenedor de orden cero a $T_s=\SI{10}{ms}$, como la ve el controlador.
-
-\begin{table}[H]
-\centering
-\caption{Parámetros de la función de transferencia identificada}
-\label{tab:lineal}
-\small
-\begin{tabularx}{\columnwidth}{lLr}
-\toprule
-Símbolo & Significado & Valor \\
-\midrule
-$K_v$ & Velocidad por unidad de comando (señal pequeña) & \SI{0.636}{m/s} \\
- & \quad extensión / retracción & \num{0.740} / \SI{0.532}{m/s} \\
- & \quad a válvula abierta ($|u|=1$) & \num{0.43} / \SI{0.29}{m/s} \\
-$\tau$ & Constante de tiempo de la velocidad & \SI{8.5}{ms} \\
-$\theta$ & Retardo (válvula y compresibilidad) & \SI{8.8}{ms} \\
-\bottomrule
-\end{tabularx}
-\end{table}
-
-La asimetría entre extensión y retracción se debe a las áreas distintas del cilindro, y la caída de $K_v$ a válvula abierta, a la ecuación de orificio. $K_v$ es el promedio de los dos sentidos en señal pequeña, que es como trabaja el lazo durante la nivelación.
-
-% ---------------------------------------------------------------------
-\subsection{Diseño del controlador}
-\label{sec:ganancias}
-
-El sistema es una cascada: tres lazos internos de posición, uno por cilindro, y un lazo exterior de nivelación que combina la prealimentación de la inclinación de la base con la realimentación del ángulo medido de la mesa.
-
-\subsubsection{Lazo interno: posición de cada cilindro}
-
-Se usa un PI $C(s)=K_p+K_i/s$ con integrador trapezoidal, anti-windup por \textit{clamping} y saturación del comando en $\pm1$. Las especificaciones son las del anteproyecto: sobrepaso $M_p\le\SI{10}{\percent}$, tiempo de establecimiento $t_s\le\SI{2}{s}$ (criterio del \SI{2}{\percent}) y error en régimen menor a \SI{2.3}{mm}, más márgenes de ganancia de al menos \SI{10}{dB} y de fase de al menos \SI{60}{\degree}. Las ganancias elegidas son
-\begin{equation}
-K_p=20\ \si{m^{-1}},\qquad K_i=1\ \si{m^{-1}.s^{-1}}.
+K_p=27.5\ \si{m^{-1}},\qquad K_i=1\ \si{m^{-1}.s^{-1}},
 \label{eq:pi}
 \end{equation}
-Con~\eqref{eq:Gid}, el lazo cruza en \SI{12.6}{rad/s}, con margen de fase de \SI{73.7}{\degree} y de ganancia de \SI{16.9}{dB}. El cruce es unas veinte veces la frecuencia pico del oleaje ($2\pi/T_p=\SI{0.63}{rad/s}$), donde el error de seguimiento del lazo cerrado es de \SI{4.9}{\percent}. El cero del PI ($K_i/K_p=\SI{0.05}{rad/s}$) queda dos décadas por debajo del cruce, así que la acción integral no reduce el margen de fase; su función es anular el error ante perturbaciones lentas, como la fuerza de carga o el sesgo de la válvula. La planta ya tiene un integrador, por lo que el lazo abierto es de tipo 2 y el error ante referencias constantes y rampas es nulo.
+con márgenes de \SI{14.1}{dB} y \SI{67.9}{\degree}. El cero del PI, en \SI{0.04}{rad/s}, queda muy por debajo del cruce y no resta fase; la acción integral corrige perturbaciones lentas, como la carga. Con $K_p$ mayor, el escalón pequeño del modelo no lineal pasa del \SI{10}{\percent} de sobreimpulso.
 
-La Tabla~\ref{tab:temporal} y la Fig.~\ref{fig:escalon} muestran la respuesta al escalón con el modelo lineal y con el modelo no lineal completo, en dos condiciones: un escalón pequeño de \SI{10}{mm} en el punto de trabajo, representativo de la nivelación, y el escalón de 0 a \SI{0.40}{m} de la validación unitaria~\cite{pil_unitario}, en que la válvula satura. Las ganancias se eligieron con estas métricas, como el controlador de menor $t_s$ en el escalón pequeño que cumple todas las especificaciones en las tres respuestas; la comparación con los demás candidatos está en el repositorio (\texttt{MODELOS/PISTON/diseno\_pi.m}).
+La Tabla~\ref{tab:escalon} y la Fig.~\ref{fig:escalon} muestran la respuesta al escalón con~\eqref{eq:G} y con el modelo no lineal, en dos casos: \SI{10}{mm} en $x_0$, como en la nivelación, y de 0 a \SI{0.40}{m}, con la válvula saturada.
 
 \begin{table}[H]
 \centering
-\caption{Respuesta al escalón del lazo interno con $K_p=20$, $K_i=1$}
-\label{tab:temporal}
+\caption{Respuesta al escalón del lazo de posición ($K_p=27.5$, $K_i=1$)}
+\label{tab:escalon}
 \footnotesize
 \setlength{\tabcolsep}{3pt}
 \begin{tabularx}{\columnwidth}{lCCCC}
 \toprule
 Respuesta & $M_p$ (\si{\percent}) & $t_r$ (\si{s}) & $t_s$ (\si{s}) & $|e_{ss}|$ (\si{mm}) \\
 \midrule
-Lineal~\eqref{eq:Gid} & 0.4 & 0.11 & 0.22 & 0 \\
-No lineal, \SI{10}{mm} & 2.4 & 0.07 & 0.28 & 0.08 \\
-No lineal, \SI{0.40}{m} & 0.1 & 0.73 & 0.96 & 0.19 \\
+$G(s)$, \SI{10}{mm} & 0.4 & 0.07 & 0.13 & 0.02 \\
+No lineal, \SI{10}{mm} & 7.5 & 0.04 & 0.21 & 0.06 \\
+MiL, \SIrange{0}{0.40}{m} & 0.8 & 0.73 & 0.95 & 0.10 \\
+PiL ideal, \SIrange{0}{0.40}{m} & 0.8 & 0.73 & 0.95 & 0.10 \\
+PiL no ideal, \SIrange{0}{0.40}{m} & 0.7 & 0.73 & 0.95 & 0.03 \\
 Requisito & $\le10$ & --- & $\le2$ & $<2.3$ \\
 \bottomrule
 \end{tabularx}
@@ -319,238 +164,140 @@ Requisito & $\le10$ & --- & $\le2$ & $<2.3$ \\
 
 \begin{figure*}[t]
 \centering
-\includegraphics[width=0.85\textwidth]{pi_final_escalon.pdf}
-\caption{Respuesta al escalón del lazo interno con $K_p=20$, $K_i=1$. Izquierda: escalón de \SI{10}{mm} en $x_0=\SI{0.23}{m}$, modelo no lineal y función de transferencia~\eqref{eq:Gid}. Derecha: escalón de 0 a \SI{0.40}{m}, en que la válvula satura y el pistón avanza a velocidad máxima. Abajo: comando de la válvula. Generada con \texttt{MODELOS/PISTON/figuras\_diseno\_pi.m}.}
+\includegraphics[width=0.85\textwidth]{pi_escalon.pdf}
+\caption{Respuesta al escalón del lazo de posición. (a) \SI{10}{mm} en $x_0$: función de transferencia~\eqref{eq:G} y modelo no lineal; líneas punteadas, banda del \SI{2}{\percent}. (b) De 0 a \SI{400}{mm}: la válvula satura y el vástago avanza a su velocidad máxima; el PiL ideal (Arduino) coincide con el MiL. Abajo, el comando de la válvula.}
 \label{fig:escalon}
 \end{figure*}
 
-En el escalón grande la válvula satura y el tiempo lo fija el caudal máximo y no $K_p$: el pistón avanza a $\approx\SI{0.43}{m/s}$ y llega en \SI{0.96}{s}. El mismo controlador, ejecutado en el Arduino en la validación unitaria, da $M_p=\SI{0.13}{\percent}$, $t_s=\SI{0.96}{s}$ y $e_{ss}=\SI{0.20}{mm}$, idénticos al MiL.
-
-\subsubsection{Lazo exterior: nivelación de la mesa}
-
-\textit{Planta equivalente.} A la frecuencia del oleaje el lazo interno sigue su referencia, de modo que la cadena \emph{comando de ángulo $\rightarrow$ cinemática inversa $\rightarrow$ pistones $\rightarrow$ inclinación de la mesa} se comporta como una ganancia estática $g$, y la mesa, que sin compensar reproduce la inclinación de la base, queda en
-\begin{equation}
-\alpha\approx\frac{1-g\,K_{ff}}{1+g\,K}\,\alpha_b .
-\label{eq:sensibilidad}
-\end{equation}
-Con la cinemática~\eqref{eq:ik}, $g=1$. Sin prealimentación ($K_{ff}=0$) la realimentación solo divide la perturbación entre $1+K$; con $K_{ff}=1$ el numerador se anula y lo que queda se debe a que el lazo interno no sigue su referencia de forma instantánea.
-\textit{Realimentación.} La Fig.~\ref{fig:barrido} muestra el barrido de $K$ sin prealimentación. La atenuación sigue~\eqref{eq:sensibilidad} con $g\approx1$, pero el lazo se vuelve inestable desde $K=6$: la dinámica de los lazos internos y el muestreo agregan fase, y con mucha ganancia la mesa oscila. Imponer el requisito solo con realimentación exigiría $K\ge\theta_{base}/\theta_{req}-1=1.9$ para la base de \SI{2.88}{\degree}, pero cualquier base de más de unos \SI{6}{\degree} queda fuera del alcance de una $K$ estable. Se eligió $K=3$, con un margen de 2 veces hasta la inestabilidad; sola, deja el pico de \textit{pitch} en \SI{0.73}{\degree}.
-
-\textit{Prealimentación.} Como la mesa reproduce la base con ganancia unitaria (un ajuste con $K=0$ da 1.02 en \textit{roll} y 0.99 en \textit{pitch}, con acoplamientos menores al \SI{3}{\percent}), basta ordenar el ángulo contrario al de la base, $K_{ff}=1$, para cancelar la perturbación sin esperar a que la mesa se incline. La prealimentación no cambia la estabilidad del lazo, porque no forma parte de él. Su límite es físico: los cilindros deben moverse con la ola, y a válvula abierta llegan a \SI{0.43}{m/s} extendiendo y a \SI{0.29}{m/s} retrayendo.
-
-\textit{Saturación.} El comando de ángulo se limita a $\pm\SI{30}{\degree}$. Con~\eqref{eq:jacobiano}, \SI{30}{\degree} pedirían unos \SI{360}{mm} de elongación, más que los $\pm\SI{220}{mm}$ de carrera libre alrededor de $x_0$, así que el límite efectivo lo pone la carrera de los cilindros, unos \SI{18}{\degree}.
-
-\textit{Por qué no basta la prealimentación.} Sin realimentación ($K=0$) la mesa se desvía poco a poco: con $H_s=\SI{2}{m}$ el error medio pasa de \SI{0.01}{\degree} en los primeros \SI{10}{s} a \SI{1}{\degree} hacia el final, y los picos llegan a \SI{2.4}{\degree} en \textit{pitch} y \SI{3.5}{\degree} en \textit{roll}. La prealimentación no mide si la mesa quedó horizontal, así que acumula las pequeñas diferencias entre el modelo y la planta; la realimentación con $K=3$ las corrige apenas aparecen.
-
+% =====================================================================
 \begin{figure*}[t]
 \centering
-\includegraphics[width=0.8\textwidth]{barrido_k.pdf}
-\caption{Realimentación sola contra la ganancia $K$ (MiL, $g=1$, $H_s=\SI{2}{m}$, $T_p=\SI{10}{s}$, sensor ideal, sin prealimentación). Arriba: atenuación del RMS de la inclinación y el modelo~\eqref{eq:sensibilidad} con $K_{ff}=0$. Abajo: pico de inclinación frente al requisito de \SI{1}{\degree}; desde $K=6$ el lazo es inestable. Generada con \texttt{figuras/fig\_final.m}.}
-\label{fig:barrido}
+\includegraphics[width=0.9\textwidth]{pil_nivelacion.pdf}
+\caption{Inclinación de la mesa con $H_s=\SI{2}{m}$: sin compensar, MiL, PiL ideal y PiL no ideal. El MiL y el PiL ideal se superponen. A la derecha, detalle de \SI{4}{s}; líneas punteadas, requisito de $\pm\SI{1}{\degree}$.}
+\label{fig:resultados}
 \end{figure*}
 
-% =====================================================================
-\section{Interfaz sensor/actuador -- MCU}
-\label{sec:interfaz}
-% Criterio C2: rangos de voltaje, resolución del ADC, PWM, escalamiento físico <-> cuentas.
-Cada cilindro usa la misma cadena de conversión validada en el PiL unitario \cite{pil_unitario}: sensor magnetostrictivo de \SIrange{0}{10}{V} sobre \SI{450}{mm}, divisor 1:2, ADC de 10 bits (\SI{0.44}{mm} por cuenta) y comando de válvula de $\pm\SI{10}{V}$ generado con PWM de 8 bits ($\Delta u=2/256\approx0.0078$) y un amplificador.
+\section{Implementación PiL}
+\label{sec:pil}
 
-En el modelo de Simulink, el transductor y la interfaz son dos subsistemas separados. El bloque \texttt{Linear encoder} está en el lazo de realimentación, entre cada cilindro y el controlador, y actúa solo sobre la posición medida: para cada uno de los tres cilindros, la posición pasa por un sesgo (error de linealidad), una histéresis (\textit{backlash}), un ruido aditivo independiente en cada cilindro, un cuantizador de \SI{0.44}{mm} (ADC) y una saturación al rango del ADC (\SIrange{0}{449.6}{mm}). La referencia no pasa por él. El subsistema \texttt{Interfaz MCU} muestrea la referencia y la posición medida a $T_s=\SI{10}{ms}$ y las convierte a precisión simple, que es el tipo que maneja el AVR; el error $e_i=x_{ref,i}-x_{m,i}$ se calcula dentro del controlador. El subsistema \texttt{Interfaz actuador} convierte el comando de vuelta a doble precisión y lo reparte a cada válvula. Con las no idealidades desactivadas, esos bloques son transparentes. Las unidades de la interfaz son metros para posición y referencia, y valor normalizado $u\in[-1,1]$ para el comando.
+\subsection{Interfaz sensor/actuador -- MCU}
+Cada cilindro usa la cadena de conversión del PiL unitario \cite{pil_unitario}: sensor magnetostrictivo de \SIrange{0}{10}{V} sobre \SI{450}{mm}, divisor 1:2 y ADC de 10 bits (\SI{0.44}{mm} por cuenta); el comando de $\pm\SI{10}{V}$ a la válvula se genera con PWM de 8 bits ($\Delta u\approx0.008$) y un amplificador. En Simulink, el bloque \texttt{Linear encoder} representa el sensor entre cada cilindro y el controlador, y el bloque \texttt{Interfaz MCU} muestrea la referencia y la posición a $T_s=\SI{10}{ms}$ y las pasa a precisión simple, el tipo del AVR. Las unidades son metros para posición y referencia, y $u\in[-1,1]$ para el comando.
 
-% =====================================================================
-\section{Implementación del controlador en hardware}
-\label{sec:control}
-% Criterio C3: discretización, periodo justificado, código validado desde MATLAB, tiempo de ejecución.
-Los tres PI se discretizan por Tustin con $T_s=\SI{10}{ms}$ y se implementan en forma posicional con anti-windup por \textit{clamping}, igual que en la validación unitaria:
+\subsection{Controlador en el ATmega328P}
+Los tres PI se discretizan por Tustin a $T_s=\SI{10}{ms}$, con anti-windup por \textit{clamping}:
 \begin{equation}
 \begin{aligned}
 I_i[k] &= I_i[k-1]+\tfrac{K_iT_s}{2}\big(e_i[k]+e_i[k-1]\big),\\
 u_i[k] &= \operatorname{sat}\big(K_p\,e_i[k]+I_i[k]\big),\qquad i=1,2,3.
 \end{aligned}
 \end{equation}
-El periodo es muy menor que el tiempo de establecimiento del lazo interno (\SI{0.28}{s}) y que el periodo pico del oleaje (\SI{10}{s}). Los tres PI forman un solo modelo, \texttt{ctrl\_pi3.slx}, con las referencias y las posiciones como vectores de tres elementos en precisión simple; usan el bloque Discrete PID Controller de Simulink, como en la validación unitaria. Embedded Coder genera el código C a partir de ese modelo y lo compila para el ATmega328P, sin escribir firmware a mano. El mismo modelo se simula en el PC (MiL) con el bloque en modo normal y se ejecuta en la placa (PiL) con el bloque en modo PIL.
+El periodo es unas 20 veces menor que el tiempo de establecimiento del lazo (\SI{0.21}{s}) y deja unas 35 muestras por periodo del cruce, cerca de \SI{17}{rad/s}. Los tres PI forman un solo modelo, \texttt{ctrl\_pi3.slx}, del que Embedded Coder genera el código C para el ATmega328P, sin firmware escrito a mano. Medido con el perfil de ejecución del PIL en 201 pasos, el paso de los tres PI tarda \SI{316}{\micro s} en promedio y \SI{332}{\micro s} como máximo: el \SI{3.3}{\percent} del periodo.
 
-\pendiente{Tiempo de ejecución medido de los tres PI en el ATmega328P frente a los \SI{10}{ms} del periodo.}
-
-% =====================================================================
-\section{Arquitectura PiL y comunicación}
-\label{sec:pil}
-% Criterio C4: protocolo documentado, sincronización y latencia acotada.
-La plataforma completa se simula en Simulink (\texttt{Model\_aaronC.slx}) y los tres PI se ejecutan en un Arduino UNO R3 mediante un único bloque Model en modo \textit{Processor-in-the-Loop} que referencia a \texttt{ctrl\_pi3} (Fig.~\ref{fig:bloquepil}). En cada periodo $T_s$, Simulink envía por el puerto serie las tres referencias y las tres posiciones medidas, el MCU ejecuta un paso del código generado y devuelve los tres comandos (Tabla~\ref{tab:interfazpil}). La simulación avanza solo cuando recibe la respuesta (\textit{lockstep}), por lo que la comunicación no se traslada a la planta. El enlace es de \SI{115200}{baud}; el programa lo carga y lo comunica el \textit{Simulink Support Package for Arduino Hardware}. En el AVR un \texttt{double} ocupa 4 bytes, por lo que la interfaz del controlador es de precisión simple.
+\subsection{Comunicación y sincronización}
+Un único bloque Model en modo PIL ejecuta \texttt{ctrl\_pi3} en el Arduino. En cada periodo, Simulink envía por el puerto serie las tres referencias y las tres posiciones medidas, el MCU calcula un paso y devuelve los tres comandos (Tabla~\ref{tab:serie}). La simulación espera la respuesta antes de avanzar (\textit{lockstep}), así que la comunicación no retrasa la planta. La latencia de un paso se acota así: los 36 bytes de datos ocupan \SI{3.1}{ms} a \SI{115200}{baud} y el cálculo, \SI{0.33}{ms}; con el encabezado del protocolo de Simulink, que no se midió, el ciclo sigue cabiendo en los \SI{10}{ms} del periodo.
 
 \begin{table}[H]
 \centering
-\caption{Señales entre Simulink y el MCU en cada periodo}
-\label{tab:interfazpil}
+\caption{Datos entre Simulink y el MCU en cada periodo}
+\label{tab:serie}
 \small
 \begin{tabularx}{\columnwidth}{llLr}
 \toprule
-Sentido & Señal & Contenido & Datos \\
+Sentido & Señal & Contenido & Bytes \\
 \midrule
-Simulink $\rightarrow$ MCU & \texttt{ref} & Referencia de los tres cilindros [m] & $3\times4$ B \\
-Simulink $\rightarrow$ MCU & \texttt{x} & Posición medida (tras el ADC) [m] & $3\times4$ B \\
-MCU $\rightarrow$ Simulink & \texttt{u} & Comando de las tres válvulas, en $[-1,1]$ & $3\times4$ B \\
+PC $\rightarrow$ MCU & \texttt{ref} & Referencias de los 3 cilindros [m] & 12 \\
+PC $\rightarrow$ MCU & \texttt{x} & Posiciones medidas [m] & 12 \\
+MCU $\rightarrow$ PC & \texttt{u} & Comandos de las 3 válvulas & 12 \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-Por cada periodo viajan 36 bytes de carga útil, es decir, al menos $36\cdot10/115200\approx\SI{3.1}{ms}$ de los \SI{10}{ms} del periodo, sin contar el encabezado del protocolo de Simulink. \pendiente{Latencia medida de un paso PiL.}
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=\columnwidth]{pil_bloques.png}
-\caption{Arquitectura PiL de la plataforma completa (nivel principal de \texttt{Model\_aaronC.slx}): las posiciones de los tres cilindros vuelven por el \texttt{Linear encoder}, la \texttt{Interfaz MCU} las muestrea junto con las referencias, el bloque \texttt{Controlador} ejecuta \texttt{ctrl\_pi3} en el Arduino y la \texttt{Interfaz actuador} reparte el comando a las válvulas.}
-\label{fig:bloquepil}
-\end{figure}
-
 % =====================================================================
-\section{Implementación 1: sensores y actuadores ideales}
-\label{sec:ideal}
-% Criterio C5: PiL ideal frente al MiL con una métrica definida.
-Con sensores y actuadores ideales se simularon \SI{30}{s} de oleaje ($H_s=\SI{2}{m}$, $T_p=\SI{10}{s}$, $K_{ff}=1$, $K=3$, $K_p=20$, $K_i=1$, $U_{sat}=1$) con el controlador en el PC (MiL) y en el Arduino UNO (PiL). La métrica de coincidencia es el RMSE y el error máximo de la inclinación de la mesa entre ambos, calculados sobre una malla común, ya que el solver de la planta es de paso variable.
+\section{Resultados}
+\label{sec:resultados}
 
-El PiL ideal reproduce al MiL con error nulo en \textit{pitch} y en \textit{roll}: RMSE de \SI{0.0000}{\degree} y error máximo de \SI{0.0000}{\degree}, frente a un pico de inclinación de \SI{0.128}{\degree} (Fig.~\ref{fig:resultados}). El código C generado por Embedded Coder y ejecutado en el ATmega328P calcula, por tanto, exactamente lo mismo que el modelo en el PC.
+\subsection{Sensores y actuadores ideales}
+Se simularon \SI{30}{s} de oleaje con el controlador en el PC (MiL) y en el Arduino (PiL). La métrica de coincidencia es la raíz del error cuadrático medio (RMSE) de la inclinación de la mesa entre ambos, sobre una malla común de \SI{10}{ms}. El PiL ideal reproduce al MiL con RMSE nulo: el código del ATmega328P calcula lo mismo que el modelo en el PC (Tabla~\ref{tab:resultados}, Fig.~\ref{fig:resultados}).
 
-% =====================================================================
-\section{Implementación 2: sensores y actuadores no ideales}
-\label{sec:noideal}
-% Criterio C6: al menos 3 no idealidades justificadas con hojas de datos.
-Se activaron cuatro no idealidades del sensor de posición de cada cilindro (Tabla~\ref{tab:noideal}). Las tres primeras tienen los mismos valores que en la validación unitaria \cite{pil_unitario}. La cuarta es un ruido eléctrico en la entrada analógica, gaussiano, de desviación estándar igual a cinco pasos del ADC (\SI{2.2}{mm}) e independiente en cada cilindro (semillas distintas). La hoja de datos del ATmega328P especifica para su ADC una exactitud absoluta típica de 2 LSB \cite{atmega328p}; el valor de 5 LSB representa un caso pesimista, con el cableado analógico largo y el ruido de las electroválvulas, y hace visible el efecto sobre la mesa. Con 1 LSB la diferencia en la inclinación de la mesa era de \SI{0.0075}{\degree} RMS, imperceptible a la escala del requisito.
+\subsection{Sensores no ideales}
+Se activaron cuatro no idealidades del sensor de posición (Tabla~\ref{tab:noideal}). La linealidad y la histéresis vienen de la hoja de datos del cilindro y su sensor \cite{rexroth}; la cuantización, del ADC del ATmega328P \cite{atmega328p}. El ruido es gaussiano, independiente en cada cilindro, de 5 pasos del ADC: la hoja de datos da una exactitud típica de 2 LSB \cite{atmega328p}, y 5 LSB representa un cableado largo cerca de las electroválvulas.
 
 \begin{table}[H]
 \centering
-\caption{No idealidades del sensor de posición de cada cilindro}
+\caption{No idealidades del sensor de posición}
 \label{tab:noideal}
 \small
 \begin{tabularx}{\columnwidth}{lLr}
 \toprule
 No idealidad & Modelo & Valor \\
 \midrule
-Error de linealidad & Sesgo constante (peor caso) & \SI{0.09}{mm} \\
+Linealidad & Sesgo, peor caso & \SI{0.09}{mm} \\
 Histéresis & \textit{Backlash} & \SI{0.004}{mm} \\
-Cuantización & ADC de 10 bits sobre \SI{450}{mm} & \SI{0.44}{mm} \\
-Ruido eléctrico & Gaussiano, independiente por cilindro, a $T_s$ & $\sigma=\SI{2.2}{mm}$ \\
+Cuantización & ADC de 10 bits & \SI{0.44}{mm} \\
+Ruido & Gaussiano, por cilindro & $\sigma=\SI{2.2}{mm}$ \\
 \bottomrule
 \end{tabularx}
 \end{table}
-El error de linealidad y la histéresis se toman de la hoja de datos del cilindro y de su sensor de posición \cite{rexroth}, y la cuantización, de la resolución del ADC del ATmega328P \cite{atmega328p}, igual que en la validación unitaria \cite{pil_unitario}.
 
-Las no idealidades se ven primero donde actúan: en el lazo de posición. El comando de cada válvula pasa a tener una componente de ruido de \num{0.06} RMS (\num{0.26} como máximo), del orden de $K_p\sigma=0.044$ más la cuantización, y el esfuerzo de control sube de \num{0.044} a \num{0.074} RMS en la válvula más exigida (Fig.~\ref{fig:comando}). En la inclinación de la mesa el PiL no ideal se aparta del PiL ideal en \SI{0.043}{\degree} RMS (\SI{0.148}{\degree} como máximo) en \textit{pitch} y en \SI{0.044}{\degree} RMS (\SI{0.172}{\degree} como máximo) en \textit{roll}; el pico de \textit{pitch} pasa de \SI{0.128}{\degree} a \SI{0.250}{\degree} y el de \textit{roll}, de \SI{0.060}{\degree} a \SI{0.186}{\degree}. Con la prealimentación, la ola casi se cancela y el ruido del encoder pasa a ser la mayor parte de la inclinación que queda (Fig.~\ref{fig:resultados}, abajo), pero sigue muy por debajo de \SI{1}{\degree}: el lazo interno, que cruza en \SI{12.6}{rad/s}, filtra el ruido que llega a \SI{50}{Hz}. El sesgo, al ser igual en los tres cilindros, solo desplaza la mesa en altura y no la inclina.
+El ruido es lo que más se nota: el comando de las válvulas sube de \num{0.044} a \num{0.077} RMS y el pico de \textit{pitch} pasa de \SI{0.35}{\degree} a \SI{0.44}{\degree}. Aun así queda lejos del requisito, porque el lazo de posición filtra el ruido de \SI{50}{Hz}. El sesgo es igual en los tres cilindros y solo sube la mesa, sin inclinarla.
 
-Con las no idealidades activas, el PiL también coincide exactamente con el MiL del mismo caso (RMSE nulo), porque el ruido se genera en la planta con la misma semilla en ambos.
-
-\begin{figure}[H]
+\subsection{Comparación}
+\begin{table}[H]
 \centering
-\includegraphics[width=\columnwidth]{pil_comando.pdf}
-\caption{Comando de la válvula 1 calculado por el Arduino, sin y con las no idealidades del encoder (controlador final, $H_s=\SI{2}{m}$). A la derecha, detalle de \SI{2}{s}.}
-\label{fig:comando}
+\caption{Inclinación de la mesa con $H_s=\SI{2}{m}$, $T_p=\SI{10}{s}$ (\SI{30}{s}, sin los primeros \SI{2}{s}). Atenuación del RMS de \textit{pitch} respecto del caso sin compensar}
+\label{tab:resultados}
+\footnotesize
+\setlength{\tabcolsep}{2.5pt}
+\begin{tabularx}{\columnwidth}{lCCCCCC}
+\toprule
+Caso & \multicolumn{2}{c}{\textit{Pitch} (\si{\degree})} & \multicolumn{2}{c}{\textit{Roll} (\si{\degree})} & Aten. & $u_{RMS}$ \\
+ & pico & RMS & pico & RMS & (dB) & \\
+\midrule
+Sin compensar & 2.871 & 1.435 & 1.504 & 0.561 & --- & --- \\
+MiL & 0.349 & 0.156 & 0.161 & 0.067 & $-19.3$ & 0.044 \\
+PiL ideal & 0.349 & 0.156 & 0.161 & 0.067 & $-19.3$ & 0.044 \\
+PiL no ideal & 0.438 & 0.153 & 0.247 & 0.079 & $-19.5$ & 0.077 \\
+Requisito & 1 & --- & 1 & --- & --- & --- \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+La mesa queda ocho veces por debajo de la base en pico y nueve en valor RMS. Lo que sobra tiene la forma de la ola, levemente atrasado: es el tiempo que tardan los cilindros en seguir su referencia. Ninguna válvula satura.
+
+\subsection{Oleajes más grandes}
+Se probaron olas lentas ($T_p=\SI{12}{s}$) que inclinan la base \SIlist{5;10;15}{\degree} (Fig.~\ref{fig:oleaje}). La mesa queda en \SIlist{0.52;1.09;1.79}{\degree} de \textit{pitch} en MiL, y en \SIlist{0.57;1.12;1.81}{\degree} en el PiL no ideal: reduce la inclinación unas ocho veces en los tres casos. El residuo crece con la ola porque crece el atraso de los cilindros, y desde unos \SI{10}{\degree} pasa de \SI{1}{\degree}. A \SI{15}{\degree} los vástagos llegan a \SI{15}{mm} del tope, el límite de esta plataforma. Ninguna válvula satura.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{oleaje_casos.pdf}
+\caption{\textit{Pitch} con bases de \SIlist{5;10;15}{\degree} ($T_p=\SI{12}{s}$): base sin compensar (eje izquierdo) y mesa en MiL y en PiL no ideal (eje derecho).}
+\label{fig:oleaje}
 \end{figure}
 
 % =====================================================================
-\section{Resultados y análisis comparativo}
-\label{sec:resultados}
-% Criterio R3: MiL vs PiL ideal vs PiL no ideal, con métricas y conclusiones.
-La Tabla~\ref{tab:resultados} y la Fig.~\ref{fig:resultados} comparan los casos durante \SI{30}{s}, sin contar los primeros \SI{2}{s} de arranque de los pistones.
-
-\begin{table}[H]
-\centering
-\caption{Inclinación de la mesa ($H_s=\SI{2}{m}$, $T_p=\SI{10}{s}$, \SI{30}{s}). Controlador final: $K_{ff}=1$, $K=3$. La atenuación es la del valor RMS de \textit{pitch} respecto del caso sin compensar}
-\label{tab:resultados}
-\footnotesize
-\setlength{\tabcolsep}{3pt}
-\begin{tabularx}{\columnwidth}{lCCCCC}
-\toprule
-Caso & Pico \textit{pitch} (\si{\degree}) & RMS \textit{pitch} (\si{\degree}) & Pico \textit{roll} (\si{\degree}) & RMS \textit{roll} (\si{\degree}) & Aten. (dB) \\
-\midrule
-Sin compensar & 2.878 & 1.434 & 1.522 & 0.561 & --- \\
-Solo realim. ($K=3$) & 0.735 & 0.362 & 0.383 & 0.140 & $-12.0$ \\
-Final, MiL & 0.128 & 0.054 & 0.060 & 0.025 & $-28.4$ \\
-Final, PiL ideal & 0.128 & 0.054 & 0.060 & 0.025 & $-28.4$ \\
-Final, PiL no ideal & 0.250 & 0.066 & 0.186 & 0.048 & $-26.7$ \\
-Requisito & 1 & --- & 1 & --- & --- \\
-\bottomrule
-\end{tabularx}
-\end{table}
-
-\begin{figure*}[t]
-\centering
-\includegraphics[width=0.85\textwidth]{pil_nivelacion.pdf}
-\caption{Inclinación de la mesa en \textit{pitch} y en \textit{roll} con $H_s=\SI{2}{m}$ y $T_p=\SI{10}{s}$: sin compensar, solo realimentación ($K=3$) y controlador final (prealimentación y $K=3$) en MiL, PiL ideal y PiL no ideal; el MiL y el PiL ideal se superponen. Abajo: detalle del controlador final, en que el ruido del encoder es visible. Generada con \texttt{figuras/fig\_final.m}.}
-\label{fig:resultados}
-\end{figure*}
-
-La realimentación sola ($K=3$) reduce la inclinación 4 veces (\SI{-12}{dB}), como predice~\eqref{eq:sensibilidad}, y deja el pico de \textit{pitch} en \SI{0.73}{\degree}. Con la prealimentación, la reducción es de 22 veces en pico y 26 en valor RMS (\SI{-28.4}{dB}): el pico de \textit{pitch} pasa de \SI{2.88}{\degree} a \SI{0.13}{\degree} y el de \textit{roll}, de \SI{1.52}{\degree} a \SI{0.06}{\degree}. Lo que queda sigue la forma de la ola, retrasado: es el error de seguimiento del lazo interno. El PiL ideal y el MiL son idénticos, y las no idealidades del encoder llevan el pico a \SI{0.25}{\degree} en \textit{pitch} y \SI{0.19}{\degree} en \textit{roll}, cuatro veces por debajo del requisito. El esfuerzo de control sigue siendo bajo: el comando RMS más alto es de \num{0.074}, y ninguna válvula satura.
-
-\subsection{Estados de mar más agresivos}
-\label{sec:oleaje}
-Con $H_s=\SI{2}{m}$ y $T_p=\SI{10}{s}$ la base apenas supera \SI{3}{\degree}. Según~\eqref{eq:eta} y~\eqref{eq:pendientes}, la pendiente de la superficie crece con $k_n=\omega_n^2/g$, es decir, como $H_s/T_p^2$: subir $H_s$ la aumenta solo en proporción, mientras que acortar el periodo la aumenta con el cuadrado. Evaluando fuera de Simulink la misma función del bloque de oleaje, se fijó $H_s=\SI{2}{m}$ y se eligieron tres periodos que dan picos de \SIlist{5;10;15}{\degree} en la base: $T_p=\SIlist{7.5;5.3;4.3}{s}$. El caso de \SI{4.3}{s} es un mar muy empinado, cerca del límite de rompiente. Cada caso se corrió sin compensar, con solo realimentación ($K=3$) y con el controlador final, en MiL y en PiL no ideal (Tabla~\ref{tab:oleaje}, Fig.~\ref{fig:oleaje}).
-
-\begin{table}[H]
-\centering
-\caption{Inclinación de la mesa con oleajes más agresivos ($H_s=\SI{2}{m}$, \SI{30}{s}). Pico y RMS de \textit{pitch}; $u_{RMS}$ y porcentaje de tiempo saturado de la válvula más exigida. Final: $K_{ff}=1$, $K=3$}
-\label{tab:oleaje}
-\footnotesize
-\setlength{\tabcolsep}{3pt}
-\begin{tabularx}{\columnwidth}{lCCCC}
-\toprule
-Caso & Pico (\si{\degree}) & RMS (\si{\degree}) & $u_{RMS}$ & Sat. (\si{\percent}) \\
-\midrule
-\multicolumn{5}{l}{$T_p=\SI{7.5}{s}$ (\SI{5}{\degree})} \\
-\quad Sin compensar & 5.11 & 2.38 & --- & 0 \\
-\quad Solo realim. & 1.34 & 0.62 & 0.076 & 0 \\
-\quad Final, MiL & 0.32 & 0.13 & 0.104 & 0 \\
-\quad Final, PiL no ideal & 0.59 & 0.15 & 0.121 & 0 \\
-\multicolumn{5}{l}{$T_p=\SI{5.3}{s}$ (\SI{10}{\degree})} \\
-\quad Sin compensar & 10.14 & 4.55 & --- & 0 \\
-\quad Solo realim. & 23.9 & 8.0 & 0.67 & 38 \\
-\quad Final, MiL & 28.6 & 9.8 & 0.75 & 48 \\
-\quad Final, PiL no ideal & \multicolumn{4}{c}{simulación interrumpida en $t=\SI{12.7}{s}$} \\
-\multicolumn{5}{l}{$T_p=\SI{4.3}{s}$ (\SI{15}{\degree})} \\
-\quad Sin compensar & 15.15 & 6.56 & --- & 0 \\
-\quad Solo realim. & 35.2 & 10.7 & 0.83 & 61 \\
-\quad Final, MiL & 23.7 & 10.0 & 0.88 & 72 \\
-\quad Final, PiL no ideal & \multicolumn{4}{c}{simulación interrumpida en $t=\SI{11.3}{s}$} \\
-\bottomrule
-\end{tabularx}
-\end{table}
-
-\begin{figure*}[t]
-\centering
-\includegraphics[width=0.85\textwidth]{oleaje_casos.pdf}
-\caption{\textit{Pitch} de la mesa con los tres estados de mar de la Tabla~\ref{tab:oleaje}: sin compensar, solo realimentación ($K=3$) y controlador final en MiL y en PiL no ideal (Arduino). Con $T_p=\SIlist{5.3;4.3}{s}$ la simulación PiL se interrumpió. Generada con \texttt{figuras/fig\_oleaje.m}.}
-\label{fig:oleaje}
-\end{figure*}
-
-Con \SI{5}{\degree} el controlador final deja la mesa en \SI{0.32}{\degree} (\SI{0.59}{\degree} en el PiL no ideal; \SI{0.81}{\degree} en \textit{roll}), dentro del requisito, mientras que la realimentación sola no lo cumple (\SI{1.34}{\degree}). Con \SIlist{10;15}{\degree} la plataforma pierde la nivelación con o sin prealimentación: las válvulas pasan entre el 38 y el \SI{72}{\percent} del tiempo saturadas, la mesa termina más inclinada que la base y, en el PiL, el solver de Simscape se detiene hacia los \SI{12}{s}. La causa es un límite físico de los actuadores, no del controlador. Con el jacobiano~\eqref{eq:jacobiano}, seguir la inclinación de la base exige que los cilindros se muevan, como máximo, a \SIlist{0.06;0.13;0.38;0.70}{m/s} con bases de \SIlist{3;5;10;15}{\degree}, con elongaciones de hasta \SIlist{39;70;139;207}{mm}, mientras que a válvula abierta llegan a \SI{0.43}{m/s} extendiendo y \SI{0.29}{m/s} retrayendo. Con \SI{10}{\degree} los cilindros no pueden retraerse a la velocidad que pide la ola, y con \SI{15}{\degree} tampoco extenderse, además de acercarse al tope de carrera. Con estos cilindros y válvulas, MARLUP nivela por debajo de \SI{1}{\degree} los oleajes probados de hasta \SI{5}{\degree}, y el límite de velocidad se alcanza entre \SIlist{5;10}{\degree}; para estados de mar más empinados haría falta más caudal.
-
-% =====================================================================
 \section{Conclusiones}
-\label{sec:conclusiones}
 \begin{itemize}
-\item Se identificó la función de transferencia del actuador sobre el modelo no lineal, $G(s)=0.636\,e^{-0.0088s}/[s(0.0085s+1)]$, y con ella se diseñó un único PI para los tres cilindros, $K_p=20$, $K_i=1$, que cumple las especificaciones con $M_p=\SI{2.4}{\percent}$ y $t_s=\SI{0.28}{s}$ en señal pequeña, y márgenes de \SI{16.9}{dB} y \SI{73.7}{\degree}.
-\item El controlador de los tres pistones, generado por Embedded Coder desde \texttt{ctrl\_pi3.slx} y ejecutado en el ATmega328P, reproduce exactamente la simulación en el PC: RMSE de \SI{0.0000}{\degree} y error máximo nulo en \SI{30}{s} de oleaje, con la plataforma completa en Simulink y un solo bloque Model en modo PIL.
-\item La cinemática inversa de los avances anteriores suponía que la mesa giraba sobre su propio centro, pero en el ensamble gira sobre el centro de la base, porque cada pata tiene un solo pasador en su unión superior. Por eso la mesa realizaba solo $R_T/R_B=0.188$ del ángulo ordenado. Con la cinemática corregida la ganancia medida es de 1.00.
-\item Con la cinemática corregida, la prealimentación de la inclinación de la base, que la Fig.~\ref{fig:cascada} ya planteaba, cancela casi toda la perturbación. Junto con una realimentación $K=3$ (el lazo es inestable desde $K=6$), reduce el pico de \textit{pitch} de \SI{2.88}{\degree} a \SI{0.13}{\degree} y el de \textit{roll} de \SI{1.52}{\degree} a \SI{0.06}{\degree} (\SI{-28.4}{dB}) con $H_s=\SI{2}{m}$; la realimentación sola llega a \SI{0.73}{\degree} (\SI{-12}{dB}).
-\item Las cuatro no idealidades del encoder lineal, en el lazo de realimentación (linealidad, histéresis, ADC de 10 bits y ruido de 5 LSB), agregan ruido de \num{0.06} RMS al comando de las válvulas y llevan el pico de inclinación a \SI{0.25}{\degree}, cuatro veces por debajo del requisito.
-\item La perturbación crece como $H_s/T_p^2$. Con $H_s=\SI{2}{m}$ y $T_p=\SIlist{7.5;5.3;4.3}{s}$ la base se inclina \SIlist{5;10;15}{\degree}. El controlador final cumple el requisito con \SI{5}{\degree} (\SI{0.59}{\degree} en el PiL no ideal), pero con \SIlist{10;15}{\degree} los cilindros tendrían que moverse a \SIlist{0.38;0.70}{m/s}, más rápido de lo que permiten sus válvulas, y la plataforma pierde la nivelación.
+\item El PI de los tres cilindros se diseñó sobre la función de transferencia identificada del actuador: $K_p=27.5$, $K_i=1$ da \SI{7.5}{\percent} de sobreimpulso, \SI{0.21}{s} de establecimiento y márgenes de \SI{14.1}{dB} y \SI{67.9}{\degree}.
+\item Con la prealimentación de la inclinación de la base, la mesa baja de \SI{2.87}{\degree} a \SI{0.35}{\degree} con $H_s=\SI{2}{m}$, sin medir la mesa.
+\item El controlador generado por Embedded Coder y ejecutado en el ATmega328P reproduce exactamente la simulación en el PC.
+\item Con cuatro no idealidades del encoder, la mesa llega a \SI{0.44}{\degree}, dentro del requisito de \SI{1}{\degree}.
 \end{itemize}
-
-Como limitaciones, el ángulo de la mesa y el de la base se miden idealmente en la simulación, la ejecución en \textit{lockstep} no representa la latencia real de la UART ni la variabilidad del tiempo de cómputo, y el bloque de oleaje recorta la dispersión direccional. Como trabajo futuro se propone modelar el IMU de la base y el sensor de inclinación de la mesa con sus no idealidades, ejecutar también la prealimentación en el microcontrolador, dimensionar el caudal de las válvulas para estados de mar más empinados y medir el tiempo de ejecución del controlador en el MCU frente al periodo de \SI{10}{ms}.
+Como trabajo futuro quedan modelar el IMU de la base con sus no idealidades y ejecutar también la cinemática inversa en el microcontrolador.
 
 % =====================================================================
 \begin{thebibliography}{9}
 \bibitem{pil_unitario} A. Salas, M. Solís y E. Valle, ``MARLUP: Actividad 3 -- Desarrollo de sistema Processor-in-the-Loop (validación unitaria de un actuador)'', 2026.
-\bibitem{avance2} A. Salas, M. Solís y E. Valle, ``MARLUP: Avance 2'', 2026.
-\bibitem{rexroth} Bosch Rexroth AG, ``Hydraulic cylinder, mill type, series CDH1/CGH1,'' hoja de datos RE 17331/09.05, 2005.
+\bibitem{wang2025} W. Wang, Y. Ning, Y. Zhang, P. Xu y B. Li, ``Linear active disturbance rejection control with linear quadratic regulator for Stewart platform in active wave compensation system,'' \textit{Applied Ocean Research}, vol.~156, art.~104469, 2025.
 \bibitem{pierson1964} W. J. Pierson y L. Moskowitz, ``A proposed spectral form for fully developed wind seas based on the similarity theory of S. A. Kitaigorodskii,'' \textit{Journal of Geophysical Research}, vol.~69, no.~24, pp.~5181--5190, 1964.
+\bibitem{rexroth} Bosch Rexroth AG, ``Hydraulic cylinder, mill type, series CDH1/CGH1,'' hoja de datos RE 17331/09.05, 2005.
 \bibitem{merritt} H. E. Merritt, \textit{Hydraulic Control Systems}. Nueva York: Wiley, 1967.
 \bibitem{atmega328p} Microchip Technology Inc., ``ATmega328P 8-bit AVR Microcontroller with 32K Bytes In-System Programmable Flash,'' hoja de datos DS40002061B, 2020.
-\bibitem{wang2025} W. Wang, Y. Ning, Y. Zhang, P. Xu y B. Li, ``Linear active disturbance rejection control with linear quadratic regulator for Stewart platform in active wave compensation system,'' \textit{Applied Ocean Research}, vol.~156, art.~104469, 2025. [En línea]. Disponible: \url{https://doi.org/10.1016/j.apor.2025.104469}
 \end{thebibliography}
 
 % =====================================================================
 \appendix
-\section*{Anexo: reproducibilidad}
-Repositorio: \url{https://github.com/aasalas/LAB-DE-CONTROL-GR5}, rama \texttt{develop}. Modelo de la plataforma: \texttt{MODELOS/CINEMATICA/Model\_aaronC.slx}, con parámetros en \texttt{MARLUP\_hydr\_params.m}. PiL de los tres pistones: controlador \texttt{ctrl\_pi3.slx}, configuración \texttt{config\_pil3.m} y corridas con \texttt{correr\_pil3.m}; los pasos para reproducirlo, y una bitácora, están en el \texttt{README.md}. Controlador final (prealimentación y $K=3$, $H_s=\SI{2}{m}$): barrido de $K$ en \texttt{MODELOS/CINEMATICA/exp4\_k\_ik.m}, MiL con y sin prealimentación en \texttt{exp5\_prealimentacion.m} y PiL en \texttt{exp6\_final\_ff.m}; datos en \texttt{DOCS/AVANCES/AVANCE 3/resultados/} y figuras con \texttt{figuras/fig\_final.m} y \texttt{figuras/fig\_oleaje.m}. Los resultados del controlador anterior ($K=15$, cinemática sin corregir) quedan en \texttt{exp2\_final.mat} y \texttt{exp3\_oleaje\_*.mat}. Diseño del PI: \texttt{MODELOS/PISTON/diseno\_pi.m}. Plan y resultados de los experimentos: \texttt{MODELOS/CINEMATICA/BITACORA.md}. Modelo matemático del actuador: \texttt{MODELOS/PISTON/MODELO\_MATEMATICO.md}. Validación unitaria de un actuador: \texttt{MODELOS/PISTON} y \texttt{DOCS/INFORME\_PIL}.
+\section*{Reproducibilidad}
+\raggedright
+Repositorio \url{https://github.com/aasalas/LAB-DE-CONTROL-GR5}, rama \texttt{develop}. Modelos: \texttt{MODELOS/CINEMATICA/Model\_aaron.slx} (MiL) y \texttt{Model\_aaronC.slx} (PiL), con el controlador \texttt{ctrl\_pi3.slx} y la configuración \texttt{config\_pil3.m}; una corrida se lanza con \texttt{correr\_pil3}. Diseño del PI: \texttt{MODELOS/PISTON/diseno\_pi.m}. Corridas y figuras de este informe: \texttt{exp12}, \texttt{exp13\_informe.m} y \texttt{DOCS/AVANCES/AVANCE 3/figuras/fig\_*.m}. Decisiones y resultados: \texttt{MODELOS/CINEMATICA/BITACORA.md}.
 
 \end{document}
