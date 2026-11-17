@@ -37,7 +37,7 @@ Laboratorio de Control Automático, Prof. Adolfo Chaves Jiménez}
 \maketitle
 
 \begin{abstract}
-MARLUP mantiene horizontal una mesa montada sobre una base que mueve el oleaje. Este trabajo valida su controlador con un esquema \textit{Processor-in-the-Loop} (PiL): la plataforma, el oleaje y los tres actuadores hidráulicos se simulan en Simulink, con las no idealidades del sensor de posición, y los tres controladores PI corren en un Arduino UNO con código generado por Embedded Coder. Un IMU en la base mide su inclinación y la cinemática inversa ordena a la mesa la rotación contraria. El PI se diseñó sobre la función de transferencia identificada del actuador: con $K_p=27.5$ y $K_i=1$ el sobreimpulso es de \SI{7.2}{\percent} y el tiempo de establecimiento de \SI{0.20}{s}. Con un oleaje de $H_s=\SI{2}{m}$ la mesa no pasa de \SI{0.44}{\degree}, por debajo del requisito de \SI{1}{\degree}, y con una base que se inclina \SI{15}{\degree} queda en \SI{1.81}{\degree}: la inclinación se reduce unas ocho veces en todos los casos.
+MARLUP mantiene horizontal una mesa montada sobre una base que mueve el oleaje. Este trabajo valida su controlador con un esquema \textit{Processor-in-the-Loop} (PiL): la plataforma, el oleaje y los tres actuadores hidráulicos se simulan en Simulink, con las no idealidades del sensor de posición, y los tres controladores PI corren en un Arduino UNO con código generado por Embedded Coder. Un IMU en la base mide su inclinación y la cinemática inversa ordena a la mesa la rotación contraria. El PI se diseñó sobre la función de transferencia identificada del actuador: con $K_p=27.5$ y $K_i=1$ el sobreimpulso es de \SI{7.2}{\percent} y el tiempo de establecimiento de \SI{0.20}{s}. Con un oleaje de $H_s=\SI{2}{m}$ la mesa no pasa de \SI{0.58}{\degree}, por debajo del requisito de \SI{1}{\degree}, y con una base que se inclina \SI{15}{\degree} queda en \SI{1.88}{\degree}: el RMS de la inclinación se reduce más de ocho veces en todos los casos.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -71,7 +71,7 @@ El PI se había sintonizado a mano & Se identificó $G(s)$ del actuador y el PI 
 \label{sec:sistema}
 
 \subsection{Arquitectura}
-La Fig.~\ref{fig:arquitectura} resume el sistema. Un IMU en la base mide su inclinación ($\alpha_b$, $\theta_b$), la cinemática inversa calcula la longitud que debe tener cada cilindro para que la mesa quede horizontal, y tres lazos PI de posición, uno por cilindro, llevan cada vástago a su referencia $x_{ref,i}$. Es una prealimentación pura, el esquema usual en compensación activa de oleaje \cite{wang2025}: la mesa no necesita medirse para nivelarse. La base metálica va montada sobre un flotador hexagonal de \SI{2}{m} entre vértices, que sigue el movimiento del mar.
+La Fig.~\ref{fig:arquitectura} resume el sistema. Un IMU en la base mide su inclinación ($\alpha_b$, $\theta_b$), la cinemática inversa calcula la longitud que debe tener cada cilindro para que la mesa quede horizontal, y tres lazos PI de posición, uno por cilindro, llevan cada vástago a su referencia $x_{ref,i}$. Es una prealimentación pura, el esquema usual en compensación activa de oleaje \cite{wang2025}: la mesa no necesita medirse para nivelarse. La base metálica va montada sobre un flotador hexagonal de \SI{3}{m} entre vértices, que sigue el movimiento del mar.
 
 \begin{figure*}[t]
 \centering
@@ -220,7 +220,7 @@ MCU $\rightarrow$ PC & \texttt{u} & Comandos de las 3 válvulas & 12 \\
 Se simularon \SI{30}{s} de oleaje con el controlador en el PC (MiL) y en el Arduino (PiL). La métrica de coincidencia es la raíz del error cuadrático medio (RMSE) de la inclinación de la mesa entre ambos, sobre una malla común de \SI{10}{ms}. Con sensores ideales y con sensores no ideales el RMSE es nulo: el código del ATmega328P calcula lo mismo que el modelo en el PC. Por eso todos los resultados que siguen son del PiL con el sensor no ideal.
 
 \subsection{No idealidades}
-El sensor de posición de cada cilindro incluye cuatro no idealidades (Tabla~\ref{tab:noideal}). La linealidad y la histéresis vienen de la hoja de datos del cilindro y su sensor \cite{rexroth}; la cuantización, del ADC del ATmega328P \cite{atmega328p}. El ruido es gaussiano, independiente en cada cilindro, de 5 pasos del ADC: la hoja de datos da una exactitud típica de 2 LSB \cite{atmega328p}, y 5 LSB representa un cableado largo cerca de las electroválvulas.
+El sensor de posición de cada cilindro incluye cuatro no idealidades (Tabla~\ref{tab:noideal}). La linealidad y la histéresis vienen de la hoja de datos del cilindro y su sensor \cite{rexroth}; la cuantización, del ADC del ATmega328P \cite{atmega328p}. El ruido es gaussiano, independiente en cada cilindro, de 10 pasos del ADC: la hoja de datos da una exactitud típica de 2 LSB \cite{atmega328p}, y 10 LSB representa, con margen, un cableado largo junto a las electroválvulas.
 
 \begin{table}[H]
 \centering
@@ -234,15 +234,15 @@ No idealidad & Modelo & Valor \un{mm} \\
 Linealidad & Sesgo, peor caso & 0.09 \\
 Histéresis & \textit{Backlash} & 0.004 \\
 Cuantización & ADC de 10 bits & 0.44 \\
-Ruido & Gaussiano, por cilindro & $\sigma=2.2$ \\
+Ruido & Gaussiano, por cilindro & $\sigma=4.4$ \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-Frente al sensor ideal, el ruido es lo que más se nota: con $H_s=\SI{2}{m}$ el comando de las válvulas sube de \num{0.044} a \num{0.077} RMS y el pico de \textit{pitch} de la mesa, de \SI{0.35}{\degree} a \SI{0.44}{\degree}. El lazo de posición filtra el ruido de \SI{50}{Hz}, y el sesgo, igual en los tres cilindros, solo sube la mesa sin inclinarla.
+Frente al sensor ideal, el ruido es lo que más se nota: con $H_s=\SI{2}{m}$ el comando de las válvulas sube de \num{0.044} a \num{0.135} RMS y el pico de \textit{pitch} de la mesa, de \SI{0.35}{\degree} a \SI{0.58}{\degree}. El lazo de posición filtra el ruido de \SI{50}{Hz}, y el sesgo, igual en los tres cilindros, solo sube la mesa sin inclinarla.
 
 \subsection{Nivelación}
-La Tabla~\ref{tab:resultados} resume los cuatro estados de mar; las Figs.~\ref{fig:resultados} y~\ref{fig:oleaje} muestran las bases de \SIlist{15;10;5}{\degree} con la base y la mesa en la misma escala. En todos los casos la mesa queda unas ocho veces por debajo de la base, y con el mar de $H_s=\SI{2}{m}$ cumple el requisito de \SI{1}{\degree} con amplio margen. Lo que sobra tiene la forma de la ola, levemente atrasado: es el tiempo que tardan los cilindros en seguir su referencia, y crece con la ola. Ninguna válvula satura; con la base a \SI{15}{\degree} los vástagos llegan a \SI{15}{mm} del tope, el límite de esta plataforma.
+La Tabla~\ref{tab:resultados} resume los cuatro estados de mar; las Figs.~\ref{fig:resultados} y~\ref{fig:oleaje} muestran las bases de \SIlist{15;10;5}{\degree} con la base y la mesa en la misma escala. En todos los casos el RMS de la mesa queda más de ocho veces por debajo del de la base, y con el mar de $H_s=\SI{2}{m}$ cumple el requisito de \SI{1}{\degree} con amplio margen. Lo que sobra tiene la forma de la ola, levemente atrasado: es el tiempo que tardan los cilindros en seguir su referencia, y crece con la ola. Ninguna válvula satura; con la base a \SI{15}{\degree} los vástagos llegan a \SI{15}{mm} del tope, el límite de esta plataforma.
 
 \begin{table}[H]
 \centering
@@ -255,10 +255,10 @@ La Tabla~\ref{tab:resultados} resume los cuatro estados de mar; las Figs.~\ref{f
 Oleaje & \multicolumn{2}{c}{Base \un{\degree}} & \multicolumn{2}{c}{Mesa \un{\degree}} & Aten. \\
  & \textit{pitch} & \textit{roll} & \textit{pitch} & \textit{roll} & \un{dB} \\
 \midrule
-$H_s=\SI{2}{m}$, $T_p=\SI{10}{s}$ & 2.87 & 1.50 & 0.44 & 0.25 & $-19.5$ \\
-Base de \SI{5}{\degree} & 5.00 & 2.64 & 0.57 & 0.37 & $-20.4$ \\
-Base de \SI{10}{\degree} & 10.00 & 5.31 & 1.12 & 0.66 & $-20.6$ \\
-Base de \SI{15}{\degree} & 15.00 & 8.04 & 1.81 & 1.02 & $-20.2$ \\
+$H_s=\SI{2}{m}$, $T_p=\SI{10}{s}$ & 2.87 & 1.50 & 0.58 & 0.38 & $-18.3$ \\
+Base de \SI{5}{\degree} & 5.00 & 2.64 & 0.67 & 0.52 & $-19.7$ \\
+Base de \SI{10}{\degree} & 10.00 & 5.31 & 1.21 & 0.82 & $-20.4$ \\
+Base de \SI{15}{\degree} & 15.00 & 8.04 & 1.88 & 1.18 & $-19.7$ \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -275,8 +275,8 @@ Base de \SI{15}{\degree} & 15.00 & 8.04 & 1.81 & 1.02 & $-20.2$ \\
 \begin{itemize}
 \item El PI de los tres cilindros se diseñó sobre la función de transferencia identificada del actuador: $K_p=27.5$, $K_i=1$ da \SI{7.2}{\percent} de sobreimpulso, \SI{0.20}{s} de establecimiento y márgenes de \SI{14.1}{dB} y \SI{67.9}{\degree}.
 \item El controlador generado por Embedded Coder corre en el ATmega328P en \SI{0.33}{ms} de los \SI{10}{ms} del periodo y reproduce exactamente la simulación en el PC.
-\item Con la prealimentación de la inclinación de la base, y con las no idealidades del sensor, la mesa queda en \SI{0.44}{\degree} con $H_s=\SI{2}{m}$, dentro del requisito de \SI{1}{\degree}, sin medir la mesa.
-\item La inclinación se reduce unas ocho veces hasta con una base de \SI{15}{\degree}, en que la mesa llega a \SI{1.81}{\degree}.
+\item Con la prealimentación de la inclinación de la base, y con las no idealidades del sensor, la mesa queda en \SI{0.58}{\degree} con $H_s=\SI{2}{m}$, dentro del requisito de \SI{1}{\degree}, sin medir la mesa.
+\item El RMS de la inclinación se reduce más de ocho veces hasta con una base de \SI{15}{\degree}, en que la mesa llega a \SI{1.88}{\degree}.
 \end{itemize}
 Como trabajo futuro, la misma cinemática inversa permite controlar también la altura $Z_0$, los desplazamientos en $x$ e $y$ y el giro en yaw, cambiando solo la pose que se le ordena a la mesa. Sobre la mesa podría montarse la lanzadera de cohetes del equipo CRATER del Grupo de Ingeniería Aeroespacial (GIA) de la Universidad de Costa Rica, que compartió sus planos: un riel guía de acero de unos \SI{2.5}{m}, cuyo apuntamiento la plataforma mantendría frente al oleaje. Quedan además modelar el IMU de la base con sus no idealidades y ejecutar la cinemática inversa en el microcontrolador.
 

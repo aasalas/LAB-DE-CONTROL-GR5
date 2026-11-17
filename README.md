@@ -11,7 +11,7 @@ Aarón Salas Alvarado, Mónica Solís Murillo, Eduardo Valle Arriola.
 | Arquitectura | **Prealimentación pura (B):** IMU de la base → cinemática inversa (rotación inversa de la base) → 3 PI de posición. Sin lazo sobre la mesa, sin saturación, sin lazo de heave |
 | Controlador | **Un solo PI en todo el proyecto: Kp = 27.5, Ki = 1**, Ts = 10 ms, en `ctrl_pi.slx` (un pistón) y `ctrl_pi3.slx` (los tres) |
 | Requisito | Inclinación de la mesa **≤ 1°** en roll y pitch con oleaje de **Hs = 2 m**, Tp = 10 s |
-| Resultado | Pico de pitch de 2.88° sin compensar a **0.35°**; roll de 1.52° a 0.16°. El PiL ideal en el Arduino coincide con el MiL; con el encoder no ideal, 0.44° |
+| Resultado | Pico de pitch de 2.88° sin compensar a **0.35°**; roll de 1.52° a 0.16°. El PiL ideal en el Arduino coincide con el MiL; con el encoder no ideal (ruido de 10 LSB), 0.58° |
 | Informe del Avance 3 | [`DOCS/AVANCES/AVANCE 3/informe_avance3.pdf`](DOCS/AVANCES/AVANCE%203/informe_avance3.pdf) |
 | Diseño del PI | [`MODELOS/PISTON/MODELO_MATEMATICO.md`](MODELOS/PISTON/MODELO_MATEMATICO.md) y `MODELOS/PISTON/diseno_pi.m` |
 | Experimentos y decisiones | [`MODELOS/CINEMATICA/BITACORA.md`](MODELOS/CINEMATICA/BITACORA.md) |
@@ -155,7 +155,7 @@ poca memoria libre la computadora se satura.
    | `Kp`, `Ki` | Ganancias del PI de cada pistón (el mismo en los tres) | 27.5, 1 |
    | `Usat` | Saturación del comando de la válvula, 1 = 100 % | 1 |
    | `en_lin`, `en_hist`, `en_q` | No idealidades del sensor: linealidad (0.09 mm), histéresis (0.004 mm) y ADC de 10 bits (0.44 mm); activas por defecto | 1, 1, 1 |
-   | `en_ruido`, `ruido_mm` | Ruido eléctrico en la entrada analógica, independiente por pistón, y su desviación estándar | 1, 2.2 mm |
+   | `en_ruido`, `ruido_mm` | Ruido eléctrico en la entrada analógica, independiente por pistón, y su desviación estándar | 1, 4.4 mm |
    | `ver_mechanics` | 1 abre Mechanics Explorer (animación 3D); consume mucha memoria | 0 |
 
    Desde el 16 nov 2026 la plataforma usa la **arquitectura B** (prealimentación pura): la
