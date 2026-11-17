@@ -11,11 +11,12 @@ Ki   = 1;       % ganancia integral [1/(m*s)]
 Usat = 1;       % saturación del comando de la válvula: u en [-Usat, Usat] (1 = 100 %)
 
 %% No idealidades del encoder lineal de cada cilindro (bloque "Linear encoder", en la realimentación)
+% Activas por defecto desde el 16-11-2026: todos los resultados se dan con el sensor no ideal.
 % 1 = activa, 0 = ideal. La "Interfaz MCU" solo muestrea (10 ms) y convierte a single.
-en_lin  = 0;    % error de linealidad: sesgo de 0.09 mm (peor caso)
-en_hist = 0;    % histéresis: backlash de 0.004 mm
-en_q    = 0;    % ADC de 10 bits sobre 450 mm: paso de 0.44 mm
-en_ruido = 0;   % ruido eléctrico en la entrada analógica, independiente en cada pistón
+en_lin  = 1;    % error de linealidad: sesgo de 0.09 mm (peor caso)
+en_hist = 1;    % histéresis: backlash de 0.004 mm
+en_q    = 1;    % ADC de 10 bits sobre 450 mm: paso de 0.44 mm
+en_ruido = 1;   % ruido eléctrico en la entrada analógica, independiente en cada pistón
 ruido_mm = 2.2; % desviación estándar del ruido [mm]: 5 LSB del ADC (antes 1 LSB, 0.44 mm, que en
                 % la inclinación de la mesa no se distinguía sin zoom)
 

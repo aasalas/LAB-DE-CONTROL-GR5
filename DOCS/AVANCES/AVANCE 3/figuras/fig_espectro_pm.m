@@ -51,19 +51,18 @@ theme(f1, 'light');
 tl = tiledlayout(f1, 1, 8, 'TileSpacing', 'compact', 'Padding', 'compact');
 azul = [0.12 0.36 0.62];
 
-ax1 = nexttile(tl, [1 3]); hold on; grid on; box on;
+ax1 = nexttile(tl, [1 3]); hold on; grid off; box off;
 % el modelo es una suma finita de senoides: el espectro es discreto (una línea por f_n)
-plot(fc, Sc, ':', 'Color', [0.55 0.55 0.55], 'LineWidth', 0.9);
 stem(f, S, 'filled', 'Color', azul, 'MarkerSize', 2.5, 'LineWidth', 0.8);
 plot([fp fp], [0 1.12*max(Sc)], '--', 'Color', [0.3 0.3 0.3]);
-text(fp + 0.02*fp, 1.06*max(Sc), sprintf('f_p = 1/T_p = %.2g Hz', fp), 'FontSize', 8);
+text(fp + 0.04*fp, 1.08*max(Sc), sprintf('$f_p = 1/T_p = %.2g$ Hz', fp), 'FontSize', 8, 'Interpreter', 'latex');
 xlim([0.4 2.6]*fp); ylim([0 1.15*max(Sc)]);       % la cola hasta f_max = 4 f_p es casi nula
-xlabel('Frecuencia f (Hz)'); ylabel('S(f_n) (m^2\cdots)');
-title('Espectro P-M discreto (suma finita)', 'FontWeight', 'normal');
-text(0.60, 0.80, {sprintf('H_s = %.3g m', Hs), sprintf('T_p = %.3g s', Tp), ...
-    sprintf('\\Deltaf = %.3g Hz', df), sprintf('%d f_n \\times %d dir.', N, M)}, ...
-    'Units', 'normalized', 'FontSize', 8, 'VerticalAlignment', 'top');
-ax1.FontSize = 8;
+xlabel('Frecuencia $f$ [Hz]', 'Interpreter', 'latex'); ylabel('$S(f_n)$ [m$^2$/Hz]', 'Interpreter', 'latex');
+title('Espectro de Pierson--Moskowitz', 'FontWeight', 'normal', 'Interpreter', 'latex');
+text(0.60, 0.80, {sprintf('$H_s = %.3g$ m', Hs), sprintf('$T_p = %.3g$ s', Tp), ...
+    sprintf('$\\Delta f = %.3g$ Hz', df), sprintf('$%d$ frecuencias $\\times$ $%d$ dir.', N, M)}, ...
+    'Units', 'normalized', 'FontSize', 8, 'VerticalAlignment', 'top', 'Interpreter', 'latex');
+ax1.FontSize = 8; ax1.TickLabelInterpreter = 'latex';
 
 ax2 = nexttile(tl, [1 3]);
 exag = 120;                                          % exageracion vertical
@@ -81,7 +80,8 @@ for i = 1:4
 end
 colormap(ax2, oceano(256));
 clim([zb max(eta(:))]);
-cb = colorbar(ax2); cb.Label.String = '\eta (m)'; cb.FontSize = 8;
+cb = colorbar(ax2); cb.Label.String = '$\eta$ [m]'; cb.Label.Interpreter = 'latex'; cb.FontSize = 8;
+cb.TickLabelInterpreter = 'latex';
 cb.Limits = [min(eta(:)) max(eta(:))];
 daspect([1 1 1/exag]); axis tight off; view(-38, 32);
 camlight('headlight'); lighting gouraud; material dull;
@@ -89,13 +89,14 @@ camlight('headlight'); lighting gouraud; material dull;
 % pantalla (z por exag) para que se vean ortogonales a la superficie dibujada
 p0 = [0 0 eta0];
 marco(ax2, p0, sx, sy, exag, 38);
-title(sprintf('Superficie del mar en t^* = %.2f s', ts), 'FontWeight', 'normal');
-text(0.5, -0.02, sprintf('%d m \\times %d m, escala vertical \\times%d', Lx, Lx, exag), 'Units', 'normalized', ...
-    'HorizontalAlignment', 'center', 'FontSize', 7, 'Color', [0.4 0.4 0.4]);
+title(sprintf('Superficie del mar en $t^* = %.2f$ s', ts), 'FontWeight', 'normal', 'Interpreter', 'latex');
+text(0.5, -0.02, sprintf('$%d$ m $\\times$ $%d$ m, escala vertical $\\times %d$', Lx, Lx, exag), 'Units', 'normalized', ...
+    'HorizontalAlignment', 'center', 'FontSize', 7, 'Color', [0.4 0.4 0.4], 'Interpreter', 'latex');
 ax2.FontSize = 8;
 
 % --- detalle en el origen: plano tangente y pendientes ---
 ax3 = nexttile(tl, [1 2]); hold on;
+ax3.SortMethod = 'childorder';                      % lo último dibujado (el marco) queda encima del plano
 e3 = 4;                                              % exageracion menor en el detalle
 r = 12; idx = find(abs(X(1, :)) <= r);              % ventana de 24 m x 24 m
 surf(X(idx, idx), Y(idx, idx), eta(idx, idx), 'EdgeColor', [1 1 1], 'EdgeAlpha', 0.25, ...
@@ -104,20 +105,20 @@ colormap(ax3, oceano(256)); clim(ax3, [zb max(eta(:))]);
 % plano tangente en (0,0)
 [Pu, Pv] = meshgrid([-0.7 0.7]*r);
 surf(Pu, Pv, eta0 + sx*Pu + sy*Pv, 'FaceColor', [1 0.85 0.3], 'FaceAlpha', 0.45, 'EdgeColor', [0.8 0.55 0]);
-marco(ax3, p0, sx, sy, e3, 7);
 % pendientes a lo largo de x y de y
 L = 0.7*r;
 plot3([0 L], [0 0], eta0 + [0 0], ':', 'Color', [0.2 0.2 0.2]);
 plot3([L L], [0 0], eta0 + [0 sx*L], '-', 'Color', [0.80 0.10 0.10], 'LineWidth', 1.2);
 plot3([0 0], [0 L], eta0 + [0 0], ':', 'Color', [0.2 0.2 0.2]);
 plot3([0 0], [L L], eta0 + [0 sy*L], '-', 'Color', [0.10 0.55 0.10], 'LineWidth', 1.2);
-daspect([1 1 1/e3]); axis tight off; view(-38, 32);
+marco(ax3, p0, sx, sy, e3, 7);                       % al final: sobre el plano tangente
+daspect([1 1 1/e3]); axis tight off; view(-38, 32); camzoom(ax3, 1.7);
 camlight('headlight'); lighting gouraud; material dull;
-title('Detalle en (0, 0)', 'FontWeight', 'normal');
-text(0.5, -0.02, {sprintf('\\partial\\eta/\\partialx = %.3f,  \\partial\\eta/\\partialy = %.3f', sx, sy), ...
-    sprintf('\\theta_b = -atan(\\partial\\eta/\\partialx) = %.2f°', rad2deg(theta_b)), ...
-    sprintf('\\alpha_b = -atan(\\partial\\eta/\\partialy) = %.2f°   (\\times%d)', rad2deg(alpha_b), e3)}, ...
-    'Units', 'normalized', 'HorizontalAlignment', 'center', 'VerticalAlignment', 'top', 'FontSize', 7);
+title('Plano tangente en $(0, 0)$', 'FontWeight', 'normal', 'Interpreter', 'latex');
+text(0.5, -0.02, {sprintf('$\\partial\\eta/\\partial x = %.3f$, \\ $\\partial\\eta/\\partial y = %.3f$', sx, sy), ...
+    sprintf('$\\theta_b = -\\arctan(\\partial\\eta/\\partial x) = %.2f^\\circ$', rad2deg(theta_b)), ...
+    sprintf('$\\alpha_b = -\\arctan(\\partial\\eta/\\partial y) = %.2f^\\circ$ \\ ($\\times %d$)', rad2deg(alpha_b), e3)}, ...
+    'Units', 'normalized', 'HorizontalAlignment', 'center', 'VerticalAlignment', 'top', 'FontSize', 7, 'Interpreter', 'latex');
 ax3.FontSize = 8;
 
 exportgraphics(f1, fullfile(here, 'espectro_pm.png'), 'Resolution', 300);
@@ -139,8 +140,8 @@ plot3(ax, p0(1), p0(2), p0(3), 'ko', 'MarkerFaceColor', 'k', 'MarkerSize', 4);
 for j = 1:3
     d = Lp*v{j}; d(3) = d(3)/exag;
     quiver3(ax, p0(1), p0(2), p0(3), d(1), d(2), d(3), 0, 'Color', col{j}, 'LineWidth', 1.6, 'MaxHeadSize', 0.6);
-    text(ax, p0(1) + 1.12*d(1), p0(2) + 1.12*d(2), p0(3) + 1.12*d(3), nom{j}, ...
-        'FontSize', 8, 'FontWeight', 'bold', 'Color', col{j});
+    text(ax, p0(1) + 1.12*d(1), p0(2) + 1.12*d(2), p0(3) + 1.12*d(3), ['$' nom{j} '$'], ...
+        'FontSize', 9, 'Color', col{j}, 'Interpreter', 'latex');
 end
 end
 

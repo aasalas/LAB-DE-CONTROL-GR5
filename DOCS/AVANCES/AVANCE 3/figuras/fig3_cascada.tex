@@ -1,4 +1,6 @@
-% Arquitectura de MARLUP (arquitectura B: prealimentación pura). Compilar con: pdflatex fig3_cascada.tex
+% Arquitectura de MARLUP (prealimentación pura). Compilar con: pdflatex fig3_cascada.tex
+% Simétrica respecto del centro: cinemática inversa y plataforma a la misma distancia de los actuadores,
+% y el oleaje centrado debajo, con sus dos salidas simétricas.
 \documentclass[tikz,border=4pt]{standalone}
 \usepackage[T1]{fontenc}
 \usepackage{newtxtext,newtxmath}
@@ -10,46 +12,43 @@
 \begin{tikzpicture}[
     >={Latex[length=2.2mm]},
     font=\small,
-    blk/.style={draw, thick, align=center, minimum height=1.0cm, inner sep=4pt},
-    act/.style={blk, fill=black!5, minimum width=3.1cm, minimum height=0.95cm},
+    blk/.style={draw, thick, align=center, inner sep=4pt},
+    act/.style={blk, fill=black!5, minimum width=3.0cm, minimum height=0.95cm},
     sig/.style={->, thick},
     dsig/.style={->, thick, dashed},
   ]
+  \def\D{5.6}      % distancia del centro a la cinemática y a la plataforma
+  \def\W{3.4cm}    % ancho común de ambos bloques
+  \def\H{3.7cm}    % alto común
 
-  % ---------------- cinemática inversa ----------------
-  \node[blk, minimum width=3.3cm, minimum height=3.6cm] (ik) at (0,0)
-       {\textbf{Cinemática}\\ \textbf{inversa}\\[4pt]
-        $\ell_i=\big\lVert R_b^{\top}(\mathbf{p}_i+z\hat{\mathbf{k}})-\mathbf{b}_i\big\rVert$\\[4pt]
-        \footnotesize la mesa gira al revés\\[-1pt] \footnotesize que la base};
-
-  % ---------------- actuadores ----------------
-  \node[act, right=1.6cm of ik] (a2) {Actuador 2\\ \footnotesize PI de posición + encoder lineal};
-  \node[act, above=0.35cm of a2] (a1) {Actuador 1\\ \footnotesize PI de posición + encoder lineal};
-  \node[act, below=0.35cm of a2] (a3) {Actuador 3\\ \footnotesize PI de posición + encoder lineal};
+  % ---------------- actuadores (centro) ----------------
+  \node[act] (a2) at (0,0) {Actuador 2\\ \footnotesize PI de posición + encoder};
+  \node[act, above=0.35cm of a2] (a1) {Actuador 1\\ \footnotesize PI de posición + encoder};
+  \node[act, below=0.35cm of a2] (a3) {Actuador 3\\ \footnotesize PI de posición + encoder};
   \begin{scope}[on background layer]
     \node[draw, dashed, gray, rounded corners, inner sep=6pt, fit=(a1)(a3),
           label={[gray]above:{3 PI en el Arduino (PiL)}}] (pil) {};
   \end{scope}
+
+  % ---------------- cinemática inversa y plataforma (simétricas) ----------------
+  \node[blk, minimum width=\W, minimum height=\H] (ik) at (-\D,0)
+       {\textbf{Cinemática}\\ \textbf{inversa}\\[5pt]
+        $\ell_i=\big\lVert R_b^{\top}(\mathbf{p}_i+Z_0\hat{\mathbf{k}})-\mathbf{b}_i\big\rVert$\\[5pt]
+        \footnotesize la mesa gira al revés\\[-1pt] \footnotesize que la base};
+  \node[blk, minimum width=\W, minimum height=\H] (plat) at (\D,0)
+       {\textbf{Plataforma}\\[2pt] Simscape Multibody\\[5pt] \footnotesize mesa, patas\\[-1pt] \footnotesize y base};
+
   \foreach \i in {1,2,3} {
     \draw[sig] (ik.east |- a\i.west) -- node[above] {$x_{ref,\i}$} (a\i.west);
+    \draw[sig] (a\i.east) -- node[above] {$x_{\i}$} (a\i.east -| plat.west);
   }
+  \draw[sig] (plat.east) -- node[above] {$\alpha,\ \theta$} ++(1.3,0);
 
-  % ---------------- plataforma ----------------
-  \node[blk, right=1.7cm of a2, minimum width=2.6cm, minimum height=3.4cm] (plat)
-       {\textbf{Plataforma}\\ Simscape\\ Multibody};
-  \foreach \i in {1,2,3} {
-    \draw[sig] ([yshift=4pt]a\i.east) -- node[above] {$s_{\i}$} ([yshift=4pt]a\i.east -| plat.west);
-    \draw[dsig] ([yshift=-6pt]a\i.east -| plat.west) -- node[below, font=\footnotesize] {$F_{L,\i}$} ([yshift=-6pt]a\i.east);
-  }
-  \draw[sig] (plat.east) -- node[above] {$\alpha,\ \theta$} ++(1.6,0) node[right, align=left, font=\footnotesize] {mesa\\ nivelada};
-
-  % ---------------- oleaje e IMU ----------------
-  \node[blk, above=1.6cm of plat, minimum width=3.3cm] (ola)
+  % ---------------- oleaje, centrado debajo, con salidas simétricas ----------------
+  \node[blk, minimum width=3.6cm, minimum height=1.0cm] (ola) at (0,-3.5)
        {Oleaje Pierson--Moskowitz\\ $H_s=\SI{2}{m},\ T_p=\SI{10}{s}$};
-  \draw[sig] (ola) -- node[right] {$z_b,\ \alpha_b,\ \theta_b$} (plat);
-  \draw[dsig] (ola.west) -| node[pos=0.25, above] {IMU en la base: $\alpha_b,\ \theta_b$} (ik.north);
-  \node[left=0.9cm of ik, align=center, font=\footnotesize] (z) {$z=Z_0$};
-  \draw[sig] (z) -- (ik);
+  \draw[dsig] (ola.west) -| node[pos=0.25, below] {IMU en la base: $\alpha_b,\ \theta_b$} (ik.south);
+  \draw[sig] (ola.east) -| node[pos=0.25, below] {base: $z_b,\ \alpha_b,\ \theta_b$} (plat.south);
 
 \end{tikzpicture}
 \end{document}
