@@ -1,6 +1,6 @@
 # Modelo matemático del actuador electrohidráulico (un pistón)
 
-Documenta el modelo de `MiL.slx` / `PiL.slx` (cilindro Rexroth CDH1 40/28 + válvula proporcional 4/3) y justifica las ganancias del PI de `ctrl_pi.slx`, que es el **controlador único del proyecto**: Kp = 20, Ki = 1, Ts = 10 ms (el mismo en los tres pistones de `ctrl_pi3.slx`).
+Documenta el modelo de `MiL.slx` / `PiL.slx` (cilindro Rexroth CDH1 40/28 + válvula proporcional 4/3) y justifica las ganancias del PI de `ctrl_pi.slx`, que es el **controlador único del proyecto**: Kp = 27.5, Ki = 1, Ts = 10 ms (el mismo en los tres pistones de `ctrl_pi3.slx`). Kp = 20 salió del diseño de la sección 6; el 16 nov 2026 se subió a 27.5 (sección 6.1).
 
 El diagrama de Simulink **no es lineal**: tiene saturación de la válvula, caudal ∝ √Δp, volúmenes que dependen de la posición V(x) y fricción F_f(ẋ). Solo hay función de transferencia tras linealizar. El modelo no lineal es el que se simula; el lineal sirve para analizar y sintonizar.
 
@@ -100,6 +100,18 @@ Controlador: $C(s)=K_p+K_i/s$, integrador trapezoidal, anti-windup por *clamping
 - **Escalón grande:** la válvula satura, el pistón avanza a ≈ 0.43 m/s y el $t_s$ (0.96 s) lo fija el caudal máximo, no $K_p$.
 - **Cuantización:** un paso del ADC (0.44 mm) da $\Delta u=K_p\cdot0.44$ mm ≈ 0.009, una cuenta del PWM de 8 bits.
 - **Por qué no los anteriores:** Kp = 6.7 no entra en la banda del 2 % en el escalón pequeño y deja 3.4 mm de error en el grande; Kp = 60 da 61 % de sobrepaso en el escalón pequeño con 44° de margen de fase.
+
+### 6.1 Actualización: Kp = 27.5 (16 nov 2026)
+
+Con la arquitectura B (prealimentación pura), el residuo de la mesa es el atraso de los pistones al seguir la ola, así que conviene el PI más rápido que todavía cumpla la regla de arriba. `MODELOS/CINEMATICA/exp11_opt_prealimentacion.m` buscó en el modelo no lineal el mayor $K_p$ que la cumple: con 160 bar es **Kp = 27.5, Ki = 1**. Ki alto (32–48) seguiría mejor la ola, pero sobrepasa 13–28 % en el escalón de 10 mm.
+
+| Respuesta (Kp = 27.5, Ki = 1) | $M_p$ | $t_s$ | $\lvert e_{ss}\rvert$ |
+|---|---|---|---|
+| Lineal, $G(s)$ | 0.4 % | 0.13 s | 0 |
+| No lineal, escalón de 10 mm | 7.5 % | 0.21 s | 0.09 mm |
+| No lineal, 0 → 0.40 m | 0.8 % | 0.95 s | — |
+
+Márgenes: 14.1 dB de ganancia y 67.9° de fase. En la plataforma completa baja el pico de pitch de la mesa de 0.449° a 0.349° en el caso nominal y de 2.28° a 1.79° con la base a 15°. La validación unitaria (`run_pil`) y las figuras de este documento siguen siendo las de Kp = 20.
 
 ### Muestreo
 

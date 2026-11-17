@@ -3,10 +3,10 @@
 % Al cambiar Kp, Ki o Usat el modelo PiL recompila y vuelve a cargar el Arduino (~1 min).
 
 %% Controlador PI de cada pistón (ctrl_pi3.slx, mismo PI en los tres)
-% Kp = 20, Ki = 1 salen del experimento de diseño MODELOS/PISTON/diseno_pi.m (antes Kp = 6.7).
-% Con este PI y la cinemática corregida (g = 1) la ganancia de nivelación K debe ser < 6:
-% con K = 6 la plataforma es inestable (exp4_k_ik.m).
-Kp   = 20;      % ganancia proporcional [1/m]: u = Kp*e, e en metros
+% Kp = 27.5, Ki = 1 salen de exp11_opt_prealimentacion.m: el mayor Kp que cumple la regla de diseño de
+% MODELOS/PISTON/diseno_pi.m (sobrepaso de 7.5 % en el escalón de 10 mm) y el que menos atrasa los
+% pistones. Antes Kp = 20 (diseno_pi.m), y antes 6.7.
+Kp   = 27.5;    % ganancia proporcional [1/m]: u = Kp*e, e en metros
 Ki   = 1;       % ganancia integral [1/(m*s)]
 Usat = 1;       % saturación del comando de la válvula: u en [-Usat, Usat] (1 = 100 %)
 
@@ -22,15 +22,11 @@ ruido_mm = 2.2; % desviación estándar del ruido [mm]: 5 LSB del ADC (antes 1 L
 %% Visualización
 ver_mechanics = 0;   % 1 = abre Mechanics Explorer (animación 3D) al simular; 0 = solo los scopes
 
-%% Lazo exterior de nivelación: prealimentación (Kff, abajo) + realimentación K = 3 en los bloques Gain
-%  y Gain1 del modelo (roll y pitch; con g = 1 el lazo es inestable desde K = 6). El comando de ángulo
-%  se satura en ±30° (pi/6 rad). Sin realimentación (K = 0) la mesa se desvía poco a poco
-%  (exp7_solo_ff: 2.4° de pitch a los 30 s). Gain2 = 0 deja el lazo de heave apagado.
-%  Hasta el 16-11-2026 era K = 15 con ±0.6 rad, pero la cinemática inversa hacía que la mesa
-%  girara solo g = 0.188 del ángulo pedido (K = 15 equivalía a K = 2.8 con g = 1).
-%% Prealimentación de la inclinación de la base (Model_aaron y Model_aaronC): 1 = activa, 0 = apagada.
-%  Se suma -Kff*[roll; pitch] de la base al comando del lazo de nivelación (un IMU en la base).
-Kff = 1;
+%% Arquitectura B: prealimentación pura (desde el 16-11-2026)
+%  La inclinación medida de la base (un IMU en la base, Demux FF) entra directo a la cinemática inversa,
+%  que ordena a la mesa la rotación inversa R_b^T. No hay lazo sobre el ángulo de la mesa, ni saturación,
+%  ni lazo de heave: se podaron del modelo. Antes: -Kff*base + K*(0 - mesa), K = 3, saturación de ±30°
+%  (0.13° nominal; B deja 0.35° con Kp = 27.5, dentro del requisito de 1°).
 
 %% Oleaje: Hs = 2 m (estado de mar 4) en P-M SPECTRUM/Constant1, Tp = 10 s. Con Hs = 0.5 m la base
 %  apenas se inclinaba 0.7°, por el recorte direccional del bloque; el requisito es 1° en la mesa.

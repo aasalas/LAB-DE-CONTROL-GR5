@@ -4,13 +4,14 @@ Plataforma de nivelación **MARLUP** (roll, pitch y heave) con tres actuadores
 hidráulicos. Curso Laboratorio de Control, Instituto Tecnológico de Costa Rica.
 Aarón Salas Alvarado, Mónica Solís Murillo, Eduardo Valle Arriola.
 
-## Estado actual (13 nov 2026)
+## Estado actual (16 nov 2026)
 
 | | |
 |---|---|
-| Controlador | **Un solo PI en todo el proyecto: Kp = 20, Ki = 1**, Ts = 10 ms, en `ctrl_pi.slx` (un pistón) y `ctrl_pi3.slx` (los tres). Lazo de nivelación **K = 15**, con saturación de ±0.6 rad |
+| Arquitectura | **Prealimentación pura (B):** IMU de la base → cinemática inversa (rotación inversa de la base) → 3 PI de posición. Sin lazo sobre la mesa, sin saturación, sin lazo de heave |
+| Controlador | **Un solo PI en todo el proyecto: Kp = 27.5, Ki = 1**, Ts = 10 ms, en `ctrl_pi.slx` (un pistón) y `ctrl_pi3.slx` (los tres) |
 | Requisito | Inclinación de la mesa **≤ 1°** en roll y pitch con oleaje de **Hs = 2 m**, Tp = 10 s |
-| Resultado | Pico de pitch de 2.88° sin compensar a **0.78°**; roll de 1.52° a 0.42°. El PiL en el Arduino coincide con el MiL (error nulo) |
+| Resultado | Pico de pitch de 2.88° sin compensar a **0.35°**; roll de 1.52° a 0.16°. El PiL ideal en el Arduino coincide con el MiL; con el encoder no ideal, 0.44° |
 | Informe del Avance 3 | [`DOCS/AVANCES/AVANCE 3/informe_avance3.pdf`](DOCS/AVANCES/AVANCE%203/informe_avance3.pdf) |
 | Diseño del PI | [`MODELOS/PISTON/MODELO_MATEMATICO.md`](MODELOS/PISTON/MODELO_MATEMATICO.md) y `MODELOS/PISTON/diseno_pi.m` |
 | Experimentos y decisiones | [`MODELOS/CINEMATICA/BITACORA.md`](MODELOS/CINEMATICA/BITACORA.md) |
@@ -37,7 +38,8 @@ PIL intercambia con ella la posición y el comando por UART, paso a paso (*locks
 
 Escalón de 0 a 0.40 m en t = 0.5 s, 4 s simulados, Ts = 10 ms, 401 muestras por caso.
 El MiL es el mismo modelo con el bloque Model en modo Normal. Desde el 13 nov 2026 el PI es el
-**controlador único del proyecto, Kp = 20, Ki = 1** (diseñado con `MODELOS/PISTON/diseno_pi.m`).
+**controlador único del proyecto**, Kp = 20, Ki = 1 (diseñado con `MODELOS/PISTON/diseno_pi.m`); desde
+el 16 nov 2026 es **Kp = 27.5, Ki = 1** (los resultados de esta sección son de Kp = 20).
 El informe de la Actividad 3 se entregó con Kp = 60, Ki = 1 (Mp = 3.43 %, ts = 1.05 s).
 
 | Caso | Mp (%) | tr (s) | ts 2 % (s) | e_ss (mm) | RMS(u) | RMSE vs MiL (mm) |
@@ -150,15 +152,16 @@ poca memoria libre la computadora se satura.
 
    | Variable | Qué hace | Valor actual |
    |---|---|---|
-   | `Kp`, `Ki` | Ganancias del PI de cada pistón (el mismo en los tres) | 20, 1 |
+   | `Kp`, `Ki` | Ganancias del PI de cada pistón (el mismo en los tres) | 27.5, 1 |
    | `Usat` | Saturación del comando de la válvula, 1 = 100 % | 1 |
    | `en_lin`, `en_hist`, `en_q` | No idealidades del sensor: linealidad (0.09 mm), histéresis (0.004 mm) y ADC de 10 bits (0.44 mm) | 0, 0, 0 |
    | `en_ruido`, `ruido_mm` | Ruido eléctrico en la entrada analógica, independiente por pistón, y su desviación estándar | 0, 0.44 mm |
    | `ver_mechanics` | 1 abre Mechanics Explorer (animación 3D); consume mucha memoria | 0 |
 
-   La ganancia `K = 15` del lazo de nivelación está en los bloques `Gain` y `Gain1` del modelo
-   (roll y pitch), con saturación de ±0.6 rad, y la altura del oleaje `Hs = 2 m` en
-   `P-M SPECTRUM/Constant1`; `correr_pil3` los cambia por opciones, sin abrir el modelo.
+   Desde el 16 nov 2026 la plataforma usa la **arquitectura B** (prealimentación pura): la
+   inclinación medida de la base entra directo a la cinemática inversa, sin lazo de nivelación,
+   sin saturación y sin lazo de heave. La altura del oleaje `Hs = 2 m` está en
+   `P-M SPECTRUM/Constant1`; `correr_pil3` la cambia por opción, sin abrir el modelo.
 3. **Correr desde la consola de MATLAB:**
 
    ```matlab
@@ -170,8 +173,7 @@ poca memoria libre la computadora se satura.
 
    | Opción | Por defecto | Significado |
    |---|---|---|
-   | `K` | 15 | Ganancia del lazo exterior de nivelación (0 = sin compensar) |
-   | `Hs` | 2 | Altura significativa del oleaje [m] |
+   | `Hs`, `Tp` | 2, 10 | Altura significativa [m] y periodo pico [s] del oleaje |
    | `Tsim` | 30 | Tiempo simulado [s] |
    | `TIni` | 2 | Se ignora este arranque al medir [s] |
    | `Puerto` | último disponible | Puerto serial del Arduino (solo PiL) |
