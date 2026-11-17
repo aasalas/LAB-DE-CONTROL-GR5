@@ -3,6 +3,29 @@
 Planes y resultados de los experimentos con `Model_aaron.slx` (MiL) y `Model_aaronC.slx` (PiL).
 Más reciente primero. El historial general del PiL está en la *Bitácora* del `README.md` de la raíz.
 
+## 16 nov 2026: arquitectura B implementada en los modelos, Kp = 27.5 (verificación `exp12`)
+
+**Decisiones de Aarón:** adoptar Kp = 27.5 como controlador único e implementar B, podando lo que no se
+usa. En `Model_aaron.slx` y `Model_aaronC.slx` se borraron las referencias (`Roll`, `Constant`,
+`Constant1`, `Constant2`), los errores (`Sum3`–`Sum5`), las ganancias (`Gain`, `Gain1`, `Gain2`), las tres
+saturaciones, `FF roll`, `FF pitch`, sus sumadores y `Sum6` (heave). Ahora `Demux FF` (inclinación de la
+base) y `Constant3` (z = 1.377 m) entran directo a `INVERSE KINEMATICS`, y `marlup_ik(alpha_b, theta_b, z)`
+ordena a la mesa R_b^T = Ry(-theta_b)·Rx(-alpha_b). `Scope6` compara la mesa con la base. También
+`ctrl_pi.slx` (validación unitaria) pasó a P = 27.5. `correr_pil3` ya no tiene las opciones K ni Kff; los
+`exp2`–`exp10` quedan como históricos.
+
+| Verificación (Kp = 27.5, Ki = 1) | Pico pitch | RMS pitch | Pico roll | u_RMS máx |
+|---|---|---|---|---|
+| MiL, nominal (Hs = 2 m, Tp = 10 s) | 0.349° | 0.156° | 0.161° | 0.044 |
+| MiL, base de 15° (Hs = 15.49 m, Tp = 12 s) | 1.793° | 0.693° | 0.868° | 0.207 |
+| PiL ideal, nominal (Arduino, COM6) | 0.349° | 0.156° | 0.161° | 0.044 |
+| PiL no ideal (encoder de 5 LSB), nominal | 0.438° | 0.153° | 0.247° | 0.077 |
+
+El MiL guardado reproduce la validación en memoria de `exp11`, y el PiL ideal es idéntico al MiL. El
+encoder no ideal suma 0.09° de pitch: todo queda bajo el requisito de 1°. Ninguna válvula satura.
+Resultados: `DOCS/AVANCES/AVANCE 3/resultados/exp12_B_mil.mat` y `exp12_B_pil.mat`.
+**Pendiente:** el informe del Avance 3 y su Fig. 1 describen todavía la arquitectura anterior.
+
 ## 16 nov 2026 (madrugada): arquitectura B y optimización de Kp, Ki y presión (`exp11`)
 
 **Decisión de Aarón:** quedarse con la **arquitectura B**, prealimentación pura: IMU de la base →
