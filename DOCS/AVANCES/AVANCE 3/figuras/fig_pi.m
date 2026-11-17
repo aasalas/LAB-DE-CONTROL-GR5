@@ -58,6 +58,7 @@ stairs(ax, tn, un, '-', 'Color', c.azul); xlim(ax, [-0.1 1]); ylabel(ax, '$u$');
 ax = nexttile(tlo, 6); hold on;
 stairs(ax, tp, P(:,5), '-', 'Color', c.azul);
 xlim(ax, [-0.1 2]); ylim(ax, [-0.1 1.1]); ylabel(ax, '$u$'); xlabel(ax, '$t$ [s]');
+fontsize(f, 10, 'points');                            % legible sin zoom a 0.85 del ancho de página
 exportgraphics(f, fullfile(here, 'pi_escalon.pdf'), 'ContentType', 'vector');
 exportgraphics(f, fullfile(here, 'pi_escalon.png'), 'Resolution', 200); close(f);
 end
