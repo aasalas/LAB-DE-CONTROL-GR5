@@ -27,6 +27,13 @@ effective_bulkmodulus = 750e6;  % Effective bulkmodulus [Pa]
 friction.visc = 1000 ;          % Viscous friction factor [Ns/m]
 
 
+% flotador (solo visual: el movimiento de la base lo impone el oleaje)
+% CAD/Flotador MARLUP.STL es "Prototipo 1 Plataforma flotante.STL" escalado x3, centrado y con la cara
+% superior en y = 0. Cuelga del marco del CAD de la base (BASE/Rigid Transform12, Y hacia arriba).
+% El fondo de las vigas está en y = 0 del CAD de la base: medido sobre una captura de Mechanics Explorer
+% (con la cara superior en -0.15 m quedaba un hueco de 0.149 m; las vigas miden ~0.17 m de alto).
+flotador.y_sup = 0;                                             % cara superior del flotador [m] (fondo de las vigas)
+
 % cylinder
 cyl.d_piston = 0.040;                                           % Cylinder piston diameter [m]
 cyl.d_rod = 0.028;                                              % Cylinder rod diameter [m]
