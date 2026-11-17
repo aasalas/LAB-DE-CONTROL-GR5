@@ -2,9 +2,10 @@ function R = exp13_informe()
 % EXP13_INFORME  Corridas del informe del Avance 3 con la arquitectura B (Kp = 27.5, Ki = 1).
 % Completa las de exp12 (MiL nominal y de 15°, PiL ideal y no ideal nominal):
 %   sin compensar (MiL, en memoria: la cinemática recibe base = 0)   nominal, 5°, 10°, 15°
-%   MiL no ideal (encoder de 5 LSB)                                 nominal
+%   MiL no ideal (encoder con ruido de 10 LSB, config_pil3.m)       nominal
 %   MiL                                                             5°, 10°
-%   PiL no ideal                                                    5°, 10°, 15°
+%   PiL no ideal                                                    nominal, 5°, 10°, 15°
+% Al cambiar las no idealidades, borrar del .mat los casos no ideales (o el archivo) y volver a correr.
 %   tiempo de ejecución de ctrl_pi3 en el ATmega328P (perfil de ejecución del PIL)
 %   costo de un paso PiL (tiempo de pared por paso, PiL menos MiL)
 % Olas grandes: Tp = 12 s, Hs = 5.06, 10.20 y 15.49 m (base de 5°, 10° y 15°). Nominal: Hs = 2 m, Tp = 10 s.
@@ -18,7 +19,7 @@ casos = {};
 for o = olas, casos(end+1, :) = {['sin_' o.id], @() sin_compensar(o.Hs, o.Tp)}; end %#ok<AGROW>
 casos(end+1, :) = {'mil_noideal_nominal', @() correr_pil3('mil', 'NoIdeal', [1 1 1 1], 'Figura', false)};
 for o = olas(2:3), casos(end+1, :) = {['mil_' o.id], @() correr_pil3('mil', 'Hs', o.Hs, 'Tp', o.Tp, 'Figura', false)}; end %#ok<AGROW>
-for o = olas(2:4)
+for o = olas
     casos(end+1, :) = {['pil_noideal_' o.id], @() correr_pil3('pil', 'Hs', o.Hs, 'Tp', o.Tp, 'NoIdeal', [1 1 1 1], 'Figura', false)}; %#ok<AGROW>
 end
 casos(end+1, :) = {'tiempos', @() tiempos()};
